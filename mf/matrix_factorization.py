@@ -41,10 +41,10 @@ class MatrixFactorization(Base):
         self.mean_ratings = np.mean(self.train[:, 2])
 
         # latent variables
-        self.user_features = 0.1 * np.random.rand(num_user, num_feature)
-        self.item_features = 0.1 * np.random.rand(num_item, num_feature)
+        self.user_features = 0.3 * np.random.rand(num_user, num_feature)
+        self.item_features = 0.3 * np.random.rand(num_item, num_feature)
 
-    def estimate(self, iterations=100, tolerance=0.001):
+    def estimate(self, iterations=100, tolerance=1e-6):
         last_rmse = None
         batch_num = int(np.ceil(float(len(self.train) / self.batch_size)))
         print "batch_num =", batch_num
@@ -123,8 +123,6 @@ class MatrixFactorization(Base):
         pass
 
 def test():
-
-    print "loadind movie lens 1M data"
     num_user, num_item, ratings = load_ml_1m()
     # suffle_data
     np.random.shuffle(ratings)
