@@ -1,7 +1,11 @@
 recommend
 =========
 
-Matrix Factorization(MF) and Bayesian MF implementation with Python
+Simple recommendatnion system implementation with Python
+
+Current method:
+- Matrix Factorization(MF)
+- Bayesian MF 
 
 Reference:
 - "Probabilistic Matrix Factorization", R. Salakhutdinov and A.Mnih., Neural Information Processing Systems 21 (NIPS 2008). Jan. 2008.
