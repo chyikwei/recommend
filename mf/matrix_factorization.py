@@ -109,7 +109,7 @@ class MatrixFactorization(Base):
                 u_feature_grads = np.zeros((self._num_user, self._num_feature))
                 i_feature_grads = np.zeros((self._num_item, self._num_feature))
 
-                for i in xrange(self.batch_size):
+                for i in xrange(data.shape[0]):
                     user = data[i, 0]
                     item = data[i, 1]
                     u_feature_grads[user, :] += u_grads[i,:]
