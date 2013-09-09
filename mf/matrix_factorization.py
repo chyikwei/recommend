@@ -39,7 +39,7 @@ class MatrixFactorization(Base):
             self.min_rating = float(self.min_rating)
 
         # mean rating
-        self._mean_ratings = np.mean(self.train[:, 2])
+        self._mean_rating = np.mean(self.train[:, 2])
 
         # latent variables
         self._user_features = 0.3 * np.random.rand(num_user, num_feature)
@@ -88,9 +88,8 @@ class MatrixFactorization(Base):
             np.random.shuffle(self.train)
 
             for batch in xrange(batch_num):
-                start_index = self.batch_size * batch
-                end_index = min(start_index + self.batch_size, len(self.train))
-                data = self.train[start_index:end_index]
+                data = self.train[
+                    batch * self.batch_size: (batch + 1) * self.batch_size]
                 # print "data", data.shape
 
                 # compute gradient
@@ -98,7 +97,7 @@ class MatrixFactorization(Base):
                 i_features = self._item_features[data[:, 1], :]
                 # print "u_feature", u_features.shape
                 # print "i_feature", i_features.shape
-                ratings = data[:, 2] - self._mean_ratings
+                ratings = data[:, 2] - self._mean_rating
                 preds = np.sum(u_features * i_features, 1)
                 errs = preds - ratings
                 err_mat = np.tile(errs, (self._num_feature, 1)).T
@@ -146,7 +145,7 @@ class MatrixFactorization(Base):
     def predict(self, data):
         u_features = self._user_features[data[:, 0], :]
         i_features = self._item_features[data[:, 1], :]
-        preds = np.sum(u_features * i_features, 1) + self._mean_ratings
+        preds = np.sum(u_features * i_features, 1) + self._mean_rating
 
         if self.max_rating:
             preds[preds > self.max_rating] = self.max_rating
