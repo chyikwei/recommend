@@ -11,7 +11,7 @@ import numpy as np
 from base import Base, DimensionError
 from util.load_data import load_ml_1m
 from util.evaluation_metrics import RMSE
-
+import time
 
 class MatrixFactorization(Base):
 
@@ -27,7 +27,7 @@ class MatrixFactorization(Base):
         self.batch_size = int(params.get('batch_size', 100000))
 
         # learning rate
-        self.epsilon = float(params.get('epsilon', 50.0))
+        self.epsilon = float(params.get('epsilon', 100.0))
         # regularization parameter (lambda)
         self.lam = float(params.get('lam', 0.001))
 
@@ -82,10 +82,10 @@ class MatrixFactorization(Base):
     def estimate(self, iterations=50, converge=1e-4):
         last_rmse = None
         batch_num = int(np.ceil(float(len(self.train) / self.batch_size)))
-        print "batch_num =", batch_num
+        print "batch_num =", batch_num + 1
 
         for iteration in xrange(iterations):
-            np.random.shuffle(self.train)
+            #np.random.shuffle(self.train)
 
             for batch in xrange(batch_num):
                 data = self.train[
@@ -123,6 +123,7 @@ class MatrixFactorization(Base):
 
             # compute RMSE
             # train errors
+            
             train_preds = self.predict(self.train)
             train_rmse = RMSE(train_preds, np.float16(self.train[:, 2]))
 
@@ -138,8 +139,8 @@ class MatrixFactorization(Base):
             # stop if converge
             if last_rmse:
                 if abs(train_rmse - last_rmse) < converge:
-                    break
-
+                    #break
+                    pass
             last_rmse = train_rmse
 
     def predict(self, data):
@@ -206,10 +207,12 @@ def test():
 
     # params
     num_feature = 10
-
+    start_time = time.clock()
     mf_model = MatrixFactorization(
-        num_user, num_item, num_feature, train, validation, max_rating=5, min_rating=1)
-    mf_model.estimate(10)
+        num_user, num_item, num_feature, train, validation, max_rating=5, min_rating=1, batch_size=100000)
+    mf_model.estimate(5)
+    end_time = time.clock()
+    print "time spend = %.3f" % (end_time - start_time)
 
     file_path = 'data/temp_features.gz'
     mf_model.save_features(file_path)
