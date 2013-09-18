@@ -89,7 +89,8 @@ def load_rating_matrix():
 
 
 def build_sparse_matrix(num_user, num_item, ratings):
-    # TODO: have not tested it yet. will test after algorithm support sparse matrix
+    # TODO: have not tested it yet. will test after algorithm support sparse
+    # matrix
     print '\nbuild sparse matrix'
     # sparse matrix
     matrix = sparse.lil_matrix((num_user, num_item))
@@ -103,12 +104,3 @@ def build_sparse_matrix(num_user, num_item, ratings):
             print item_id
 
     return matrix
-
-
-def test():
-    num_user, num_item, ratings = load_ml_1m()
-    matrix = build_matrix(num_user, num_item, ratings)
-    print 'dense matrix size', matrix.shape
-
-    spase_matrix = build_sparse_matrix(num_user, num_item, ratings)
-    print 'sparse matrix size', sparse_matrix.shape

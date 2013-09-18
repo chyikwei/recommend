@@ -9,9 +9,10 @@ Reference Matlab code: http://www.cs.toronto.edu/~rsalakhu/BPMF.html
 
 import numpy as np
 from base import Base, DimensionError
-from util.load_data import load_ml_1m
-from util.evaluation_metrics import RMSE
+from ..util.load_data import load_ml_1m
+from ..util.evaluation_metrics import RMSE
 import time
+
 
 class MatrixFactorization(Base):
 
@@ -85,7 +86,7 @@ class MatrixFactorization(Base):
         print "batch_num =", batch_num + 1
 
         for iteration in xrange(iterations):
-            #np.random.shuffle(self.train)
+            # np.random.shuffle(self.train)
 
             for batch in xrange(batch_num):
                 data = self.train[
@@ -123,7 +124,7 @@ class MatrixFactorization(Base):
 
             # compute RMSE
             # train errors
-            
+
             train_preds = self.predict(self.train)
             train_rmse = RMSE(train_preds, np.float16(self.train[:, 2]))
 
@@ -139,7 +140,7 @@ class MatrixFactorization(Base):
             # stop if converge
             if last_rmse:
                 if abs(train_rmse - last_rmse) < converge:
-                    #break
+                    # break
                     pass
             last_rmse = train_rmse
 
@@ -193,8 +194,10 @@ class MatrixFactorization(Base):
                 self._item_features, f, protocol=cPickle.HIGHEST_PROTOCOL)
 
 
-def test():
-    # TODO: move all test function into a separate file and measure performance
+def example():
+    """simple test and performance measure
+    """
+
     num_user, num_item, ratings = load_ml_1m()
     # suffle_data
     np.random.shuffle(ratings)

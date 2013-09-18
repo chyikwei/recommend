@@ -5,14 +5,15 @@ Reference paper: "Bayesian Probabilistic Matrix Factorization using MCMC"
 Reference Matlab code: http://www.cs.toronto.edu/~rsalakhu/BPMF.html
 """
 
+import time
 import numpy as np
 import numpy.random as rand
 from numpy.linalg import inv, cholesky
 
 from base import Base, DimensionError
-from util.load_data import load_ml_1m, load_rating_matrix
-from util.distributions import wishartrand
-from util.evaluation_metrics import RMSE
+from ..util.load_data import load_ml_1m, load_rating_matrix
+from ..util.distributions import wishartrand
+from ..util.evaluation_metrics import RMSE
 
 
 class BayesianMatrixFactorization(Base):
@@ -270,22 +271,27 @@ class BayesianMatrixFactorization(Base):
                 self._item_features, f, protocol=cPickle.HIGHEST_PROTOCOL)
 
 
-def test():
-    # TODO: move all test function into a separate file and measure performance
+def example():
+    """simple test and performance measure
+    """
     num_user, num_item, ratings = load_ml_1m()
     # suffle_data
     np.random.shuffle(ratings)
 
     # split data to training & validation
-    train_pct = 0.8
+    train_pct = 0.9
     train_size = int(train_pct * len(ratings))
     train = ratings[:train_size]
     validation = ratings[train_size:]
 
     # params
     num_feature = 10
-    model = BayesianMatrixFactorization(
+    bmf_model = BayesianMatrixFactorization(
         num_user, num_item, num_feature, train, validation, max_rating=5, min_rating=1)
-    model.estimate(10)
 
-    return model
+    start_time = time.clock()
+    bmf_model.estimate(5)
+    end_time = time.clock()
+    print "time spend = %.3f" % (end_time - start_time)
+
+    return bmf_model

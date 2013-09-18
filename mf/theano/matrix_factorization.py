@@ -1,11 +1,12 @@
 """
-Matrix Factorization with Theano
+Matrix Factorization with Theano implementation
+Theano: http://deeplearning.net/software/theano/
 """
 
 import numpy as np
 from ..base import Base
-from util.load_data import load_ml_1m
-from util.evaluation_metrics import RMSE
+from ...util.load_data import load_ml_1m
+from ...util.evaluation_metrics import RMSE
 
 import time
 import theano
@@ -86,7 +87,7 @@ class MatrixFactorization(Base):
         return (T.sum((norm_ratings - preds) ** 2) + self.lam * regularization) / self.batch_size
 
     def estimate(self, iterations=50, converge=1e-4):
-        #last_rmse = None
+        last_rmse = None
         batch_num = int(
             np.ceil(float(self.train_size / self.batch_size)))
         print "batch_num =", batch_num + 1
@@ -94,7 +95,8 @@ class MatrixFactorization(Base):
         batch = T.lscalar()
         user_index = T.ivector()
         item_index = T.ivector()
-        ratings = T.dvector()
+        # make sure the it match to floatX type in your Theano setting
+        ratings = T.vector(dtype=theano.config.floatX)
         cost = self.cost(user_index, item_index, ratings)
         user_grad = T.grad(cost=cost, wrt=self._user_features)
         item_grad = T.grad(cost=cost, wrt=self._item_features)
@@ -116,11 +118,11 @@ class MatrixFactorization(Base):
         for iteration in xrange(iterations):
             for batch_index in xrange(batch_num):
                 train_func(batch_index)
-                
-            # compute RMSE
+
             # train errors
             train_preds = self.predict(self.user_train, self.item_train)
-            train_rmse = RMSE(train_preds, self.rating_train.get_value(borrow=True))
+            train_rmse = RMSE(
+                train_preds, self.rating_train.get_value(borrow=True))
 
             # validation errors
             validation_preds = self.predict(
@@ -128,14 +130,15 @@ class MatrixFactorization(Base):
             validation_rmse = RMSE(
                 validation_preds, self.rating_validation.get_value(borrow=True))
             self.train_errors.append(train_rmse)
-            # self.validation_erros.append(validation_rmse)
+
             print "iterations: %3d, train RMSE: %.6f, validation RMSE: %.6f" % \
                 (iteration + 1, train_rmse, validation_rmse)
 
             # stop if converge
-            #if last_rmse:
-                #if abs(train_rmse - last_rmse) < converge:
+            if last_rmse:
+                # if abs(train_rmse - last_rmse) < converge:
                 #    break
+                pass
 
             #last_rmse = train_rmse
 
@@ -165,8 +168,10 @@ class MatrixFactorization(Base):
         pass
 
 
-def test():
-    # TODO: move all test function into a separate file and measure performance
+def example():
+    """simple test and performance measure
+    """
+
     num_user, num_item, ratings = load_ml_1m()
     # suffle_data
     np.random.shuffle(ratings)
@@ -179,11 +184,12 @@ def test():
 
     # params
     num_feature = 10
-    start_time = time.clock()
     mf_model = MatrixFactorization(
-        num_user, num_item, num_feature, train, validation, max_rating=5, min_rating=1)
-    mf_model.estimate(10)
+        num_user, num_item, num_feature, train, validation, max_rating=5, min_rating=1, batch_size=100000)
+
+    start_time = time.clock()
+    mf_model.estimate(5)
     end_time = time.clock()
     print "time spend = %.3f" % (end_time - start_time)
-   
+
     return mf_model
