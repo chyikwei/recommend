@@ -6,32 +6,34 @@ from ..util.evaluation_metrics import RMSE
 #from ..mf.bayesian_matrix_factorization import BayesianMatrixFactorization
 
 
-# load MovieLens data
-num_user, num_item, ratings = load_ml_1m()
-np.random.shuffle(ratings)
+if __name__ == "__main__":
 
-# set feature numbers
-num_feature = 10
+    # load MovieLens data
+    num_user, num_item, ratings = load_ml_1m()
+    np.random.shuffle(ratings)
 
-# set max_iterations
-max_iter = 20
+    # set feature numbers
+    num_feature = 10
 
-# split data to training & testing
-train_pct = 0.9
-train_size = int(train_pct * len(self.ratings))
-train = self.ratings[:train_size]
-validation = self.ratings[train_size:]
+    # set max_iterations
+    max_iter = 20
 
-# models
-rec = MatrixFactorization(num_user, num_item, num_feature, train, validation, max_rating=5, min_rating=1)
+    # split data to training & testing
+    train_pct = 0.9
+    train_size = int(train_pct * len(self.ratings))
+    train = ratings[:train_size]
+    validation = ratings[train_size:]
 
-# fitting
-rec.estimate(max_iter)
+    # models
+    rec = MatrixFactorization(num_user, num_item, num_feature, train, validation, max_rating=5, min_rating=1)
 
-# results
-train_preds = rec.predict(train)
-train_rmse = RMSE(validation_preds, np.float16(train[:, 2]))
-validation_preds = rec.predict(validation)
-validation_rmse = RMSE(validation_preds, np.float16(validation[:, 2]))
+    # fitting
+    rec.estimate(max_iter)
 
-print "train RMSE: %.6f, validation RMSE: %.6f " % (train_rmse, validation_rmse)
+    # results
+    train_preds = rec.predict(train)
+    train_rmse = RMSE(validation_preds, np.float16(train[:, 2]))
+    validation_preds = rec.predict(validation)
+    validation_rmse = RMSE(validation_preds, np.float16(validation[:, 2]))
+
+    print "train RMSE: %.6f, validation RMSE: %.6f " % (train_rmse, validation_rmse)
