@@ -192,33 +192,3 @@ class MatrixFactorization(Base):
                 self._user_features, f, protocol=cPickle.HIGHEST_PROTOCOL)
             cPickle.dump(
                 self._item_features, f, protocol=cPickle.HIGHEST_PROTOCOL)
-
-
-def example():
-    """simple test and performance measure
-    """
-
-    num_user, num_item, ratings = load_ml_1m()
-    # suffle_data
-    np.random.shuffle(ratings)
-
-    # split data to training & validation
-    train_pct = 0.9
-    train_size = int(train_pct * len(ratings))
-    train = ratings[:train_size]
-    validation = ratings[train_size:]
-
-    # params
-    num_feature = 10
-    start_time = time.clock()
-    mf_model = MatrixFactorization(
-        num_user, num_item, num_feature, train, validation, max_rating=5, min_rating=1, batch_size=100000)
-    mf_model.estimate(5)
-    end_time = time.clock()
-    print "time spend = %.3f" % (end_time - start_time)
-
-    file_path = 'data/temp_features.gz'
-    mf_model.save_features(file_path)
-    mf_model.load_features(file_path)
-
-    return mf_model

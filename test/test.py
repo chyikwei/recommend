@@ -7,9 +7,8 @@ from ..mf.bayesian_matrix_factorization import BayesianMatrixFactorization as BM
 from ..mf.theano.matrix_factorization import MatrixFactorization as MF_theano
 
 
-class TestMF(unittest.TestCase):
-    # TODO: finish all test case
-
+# TODO: finish all test case
+class TestLoadData(unittest.TestCase):
     def setUp(self):
         num_user, num_item, ratings = load_ml_1m()
         np.random.shuffle(ratings)
@@ -38,25 +37,32 @@ class TestMF(unittest.TestCase):
     def test_build_sparse_rating_matrix(self):
         pass
 
+
+class TestLoadModel(unittest.TestCase):
+    def test_load_model(self):
+        pass
+
+
+class TestMF(unittest.TestCase):
     def test_mf(self):
-        model = MF(
-            self.num_user, self.num_item, self.num_feature, self.train, self.validation, max_rating=5, min_rating=1)
-        model.estimate(5)
-        # training error should go down
-        self.assertGreater(model.train_errors[0], model.train_errors[-1])
+        pass
 
     def test_bayes_mf(self):
-        model = BMF(
-            self.num_user, self.num_item, self.num_feature, self.train, self.validation, max_rating=5, min_rating=1)
-        model.estimate(5)
-        # training error should go down
-        self.assertGreater(model.train_errors[0], model.train_errors[-1])
+        pass
 
     def test_mf_theano(self):
-        model = MF_theano(
-            self.num_user, self.num_item, self.num_feature, self.train, self.validation, max_rating=5, min_rating=1)
-        model.estimate(5)
-        self.assertGreater(model.train_errors[0], model.train_errors[-1])
+        pass
+
+
+class TestbayesMF(unittest.TestCase):
+    def test_bayes_mf(self):
+        pass
+
+
+class TestTheanoMF(unittest.TestCase):
+    def test_theano_mf(setlf):
+        pass
+
 
 if __name__ == '__main__':
     unittest.main()
