@@ -1,5 +1,5 @@
-![Build Status](https://circleci.com/gh/chyikwei/recommend.png?&style=shield&circle-token=41f0b88bfbe0c34a269b522ffacf3da80d9a9b20)
-
+[![Build Status](https://circleci.com/gh/chyikwei/recommend.png?&style=shield)](https://circleci.com/gh/gh/chyikwei/recommend)
+[![Coverage Status](https://coveralls.io/repos/github/chyikwei/recommend/badge.svg?branch=master)](https://coveralls.io/github/chyikwei/recommend?branch=master)
 Recommend
 =========
 
