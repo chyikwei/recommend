@@ -1,4 +1,15 @@
 dependencies:
   pre:
     - pip install numpy
+    - pip install scipy
 
+test:
+  pre:
+    - pip install coverage
+    - pip install coveralls
+
+  override:
+    - coverage run --source=recommend setup.py test
+
+  post:
+    - coveralls
