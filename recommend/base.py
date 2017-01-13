@@ -11,9 +11,6 @@ class ModelBase(object):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self):
-        pass
-
     @abstractmethod
     def fit(self, train, n_iters):
         """training models"""
@@ -23,6 +20,3 @@ class ModelBase(object):
     def predict(self, data):
         """save model"""
         pass
-
-    def __reper__(self):
-        return self.__class__.__name__
