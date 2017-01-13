@@ -1,10 +1,15 @@
 import os
+import gzip
+import cPickle
 import unittest
 
 from ..utils.datasets import make_ratings
 from ..utils.evaluation import RMSE
 from ..bpmf import BPMF
 from ..exceptions import NotFittedError
+
+TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), 'test_data')
+ML_100K_RATING_PKL = "ml_100k_ratings.pkl.gz"
 
 
 class TestBPMF(unittest.TestCase):
@@ -43,3 +48,41 @@ class TestBPMF(unittest.TestCase):
             ratings = make_ratings(10, 10, 1, 5, self.rating_choices, seed=self.seed)
             bpmf = BPMF(10, 10, self.n_feature)
             bpmf.predict(ratings[:, :2])
+
+
+class TestBPMFwithMovieLens100K(unittest.TestCase):
+
+    def setUp(self):
+        self.seed = 0
+
+        file_path = os.path.join(TEST_DATA_DIR, ML_100K_RATING_PKL)
+        with gzip.open(file_path, 'rb') as f:
+            ratings = cPickle.load(f)
+
+        self.n_user = 943
+        self.n_item = 1682
+        self.assertEqual(ratings.shape[0], 100000)
+        self.assertEqual(ratings[:, 0].min(), 1)
+        self.assertEqual(ratings[:, 0].max(), self.n_user)
+        self.assertEqual(ratings[:, 1].min(), 1)
+        self.assertEqual(ratings[:, 1].max(), self.n_item)
+
+        # let user_id / item_id start from 0
+        ratings[:, 0] = ratings[:, 0] - 1
+        ratings[:, 1] = ratings[:, 1] - 1
+        self.ratings = ratings
+
+    def test_bpmf_with_ml_100k_rating(self):
+        n_user = 943
+        n_item = 1682
+        n_feature = 10
+        ratings = self.ratings
+
+        bpmf = BPMF(n_user, n_item, n_feature,
+                    max_rating=5.,
+                    min_rating=1.,
+                    seed=self.seed)
+
+        bpmf.fit(ratings, n_iters=20)
+        rmse = RMSE(bpmf.predict(ratings[:, :2]), ratings[:, 2])
+        self.assertTrue(rmse < 0.85)
