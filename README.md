@@ -5,9 +5,9 @@ Recommend
 
 Simple recommendatnion system implementation with Python
 
-Current method:
+Current model:
 - Probabilistic Matrix Factorization
-- Bayesian MF Matrix Factorization
+- Bayesian Matrix Factorization
 
 Reference:
 - "Probabilistic Matrix Factorization", R. Salakhutdinov and A.Mnih., Neural Information Processing Systems 21 (NIPS 2008). Jan. 2008.
@@ -28,7 +28,12 @@ python setup.py install
 Test:
 ```
 python setup.py test
+
+# test with coverage
+coverage run --source=recommend setup.py test
+coverage report -m
 ```
+
 TODO:
 - Add examples
 - download movie lens data automatically
