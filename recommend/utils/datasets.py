@@ -42,11 +42,11 @@ def make_ratings(n_users, n_items, min_rating_per_user, max_rating_per_user,
     return ratings
 
 
-def load_movielens_ratings(ratings_file):
+def load_movielens_ratings(ratings_file, separator='::'):
     with open(ratings_file) as f:
         ratings = []
         for line in f:
-            line = line.split('::')[:3]
+            line = line.split(separator)[:3]
             line = [int(l) for l in line]
             ratings.append(line)
         ratings = np.array(ratings)

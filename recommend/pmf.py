@@ -25,7 +25,8 @@ class PMF(ModelBase):
     """
 
     def __init__(self, n_user, n_item, n_feature, batch_size=1e5, epsilon=100.0,
-                 seed=None, reg=1e-2, converge=1e-5, max_rating=None, min_rating=None):
+                 momentum=0.8, seed=None, reg=1e-2, converge=1e-5,
+                 max_rating=None, min_rating=None):
 
         super(PMF, self).__init__()
         self.n_user = n_user
@@ -38,7 +39,8 @@ class PMF(ModelBase):
         self.batch_size = batch_size
 
         # learning rate
-        self.epsilon = epsilon
+        self.epsilon = float(epsilon)
+        self.momentum = float(momentum)
         # regularization parameter
         self.reg = reg
         self.converge = converge
@@ -48,8 +50,8 @@ class PMF(ModelBase):
         # data state
         self._mean_rating = None
         # user/item features
-        self._user_features = 0.3 * self.random_state.rand(n_user, n_feature)
-        self._item_features = 0.3 * self.random_state.rand(n_item, n_feature)
+        self._user_features = 0.2 * self.random_state.rand(n_user, n_feature)
+        self._item_features = 0.2 * self.random_state.rand(n_item, n_feature)
 
     def fit(self, ratings, n_iters=50):
 
@@ -60,31 +62,31 @@ class PMF(ModelBase):
         batch_num = int(np.ceil(float(ratings.shape[0] / self.batch_size)))
         logger.info("batch count = %d", batch_num + 1)
 
+        # momentum
+        u_feature_mom = np.zeros((self.n_user, self.n_feature))
+        i_feature_mom = np.zeros((self.n_item, self.n_feature))
+        # gradient
         u_feature_grads = np.zeros((self.n_user, self.n_feature))
         i_feature_grads = np.zeros((self.n_item, self.n_feature))
         for iteration in xrange(n_iters):
-            #self.random_state.shuffle(train)
             logger.info("iteration %d...", iteration)
+
+            self.random_state.shuffle(ratings)
 
             for batch in xrange(batch_num):
                 start_idx = int(batch * self.batch_size)
                 end_idx = int((batch + 1) * self.batch_size)
                 data = ratings[start_idx : end_idx]
-                # print "data", data.shape
 
                 # compute gradient
                 u_features = self._user_features[data[:, 0], :]
                 i_features = self._item_features[data[:, 1], :]
-                # print "u_feature", u_features.shape
-                # print "i_feature", i_features.shape
 
                 preds = np.sum(u_features * i_features, 1)
                 errs = preds - (data[:, 2] - self._mean_rating)
-                err_mat = np.tile(errs, (self.n_feature, 1)).T
-                # print "err_mat", err_mat.shape
-
-                u_grads = u_features * err_mat + self.reg * u_features
-                i_grads = i_features * err_mat + self.reg * i_features
+                err_mat = np.tile(2 * errs, (self.n_feature, 1)).T
+                u_grads = i_features * (err_mat - self.reg)
+                i_grads = u_features * (err_mat - self.reg)
 
                 u_feature_grads.fill(0.0)
                 i_feature_grads.fill(0.0)
@@ -94,11 +96,15 @@ class PMF(ModelBase):
                     u_feature_grads[user, :] += u_grads[i, :]
                     i_feature_grads[item, :] += i_grads[i, :]
 
+                # update momentum
+                u_feature_mom = (self.momentum * u_feature_mom) + \
+                    ((self.epsilon / data.shape[0]) * u_feature_grads)
+                i_feature_mom = (self.momentum * i_feature_mom) + \
+                    ((self.epsilon / data.shape[0]) * i_feature_grads)
+
                 # update latent variables
-                self._user_features = self._user_features - \
-                    (self.epsilon / self.batch_size) * u_feature_grads
-                self._item_features = self._item_features - \
-                    (self.epsilon / self.batch_size) * i_feature_grads
+                self._user_features -= u_feature_mom
+                self._item_features -= i_feature_mom
 
             # compute RMSE
             train_preds = self.predict(ratings[:, :2])

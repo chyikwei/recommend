@@ -8,18 +8,31 @@ from ..utils.datasets import (load_movielens_ratings, make_ratings,
                               build_user_item_matrix)
 
 TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), 'test_data')
-TEST_ML_RATING_FILE = "ratings_sample_1k.dat"
+TEST_ML_1M_RATING_FILE = "ml_1m_ratings_sample_1k.dat"
+TEST_ML_100K_RATING_FILE = "ml_100k_ratings_sample_1k.dat"
 
 
 class TestLoadData(unittest.TestCase):
 
-    def test_load_movielens_ratings(self):
-        test_rating_file = os.path.join(TEST_DATA_DIR, TEST_ML_RATING_FILE)
-        ratings = load_movielens_ratings(test_rating_file)
+    def test_load_movielens_1m_ratings(self):
+        test_rating_file = os.path.join(TEST_DATA_DIR, TEST_ML_1M_RATING_FILE)
+        ratings = load_movielens_ratings(test_rating_file, separator='::')
 
         n_row, n_col = ratings.shape
         self.assertEqual(n_row, 1000)
         self.assertEqual(n_col, 3)
+        np_test.assert_array_equal(ratings[0], [1, 1193, 5])
+        np_test.assert_array_equal(ratings[-1], [10, 1022, 5])
+
+    def test_load_movielens_100k_ratings(self):
+        test_rating_file = os.path.join(TEST_DATA_DIR, TEST_ML_100K_RATING_FILE)
+        ratings = load_movielens_ratings(test_rating_file, separator='\t')
+
+        n_row, n_col = ratings.shape
+        self.assertEqual(n_row, 1000)
+        self.assertEqual(n_col, 3)
+        np_test.assert_array_equal(ratings[0], [196, 242, 3])
+        np_test.assert_array_equal(ratings[-1], [59, 485, 2])
 
 
 class TestMakeData(unittest.TestCase):
