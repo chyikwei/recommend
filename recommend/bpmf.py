@@ -15,6 +15,7 @@ from scipy.stats import wishart
 from .base import ModelBase
 from .exceptions import NotFittedError
 from .utils.datasets import build_user_item_matrix
+from .utils.validation import check_ratings
 from .utils.evaluation import RMSE
 
 logger = logging.getLogger(__name__)
@@ -65,18 +66,20 @@ class BPMF(ModelBase):
 
         # data state
         self._mean_rating = None
-        self._matrix_csr = None
-        self._matrix_csc = None
+        self._ratings_csr = None
+        self._ratings_csc = None
 
-    def fit(self, train, n_iters=50):
+    def fit(self, ratings, n_iters=50):
         """training models"""
 
-        self._mean_rating = np.mean(train[:, 2])
+        check_ratings(ratings, self.n_user, self.n_item, self.max_rating, self.min_rating)
+
+        self._mean_rating = np.mean(ratings[:, 2])
 
         # csr user-item matrix for fast row access (user update)
-        self._matrix_csr = build_user_item_matrix(self.n_user, self.n_item, train)
+        self._ratings_csr = build_user_item_matrix(self.n_user, self.n_item, ratings)
         # keep a csc matrix for fast col access (item update)
-        self._matrix_csc = self._matrix_csr.tocsc()
+        self._ratings_csc = self._ratings_csr.tocsc()
 
         last_rmse = None
         for iteration in xrange(n_iters):
@@ -91,10 +94,10 @@ class BPMF(ModelBase):
             self._update_user_features()
 
             # compute RMSE
-            train_preds = self.predict(train[:, :2])
-            train_rmse = RMSE(train_preds, train[:, 2])
-            train_preds = self.predict(train[:, :2])
-            train_rmse = RMSE(train_preds, train[:, 2])
+            train_preds = self.predict(ratings[:, :2])
+            train_rmse = RMSE(train_preds, ratings[:, 2])
+            train_preds = self.predict(ratings[:, :2])
+            train_rmse = RMSE(train_preds, ratings[:, 2])
             logger.info("iter: %d, train RMSE: %.6f", iteration, train_rmse)
 
             # stop when converge
@@ -191,13 +194,13 @@ class BPMF(ModelBase):
     def _udpate_item_features(self):
         # Gibbs sampling for item features
         for item_id in xrange(self.n_item):
-            indices = self._matrix_csc[:, item_id].indices
+            indices = self._ratings_csc[:, item_id].indices
             # print 'vec', vec.shape
             # if vec.shape[0] == 0:
             #    continue
             features = self.user_features[indices, :]
             # print 'features', features.shape
-            rating = self._matrix_csc[:, item_id].data - self._mean_rating
+            rating = self._ratings_csc[:, item_id].data - self._mean_rating
             rating = np.reshape(rating, (rating.shape[0], 1))
 
             # print 'rating', rating.shape
@@ -219,13 +222,13 @@ class BPMF(ModelBase):
     def _update_user_features(self):
         # Gibbs sampling for user features
         for user_id in xrange(self.n_user):
-            indices = self._matrix_csr[user_id, :].indices
+            indices = self._ratings_csr[user_id, :].indices
             # print len(vec)
             # if vec.shape[0] == 0:
             #    continue
             # print "item_feature", self.item_features.shape
             features = self.item_features[indices, :]
-            rating = self._matrix_csr[user_id, :].data - self._mean_rating
+            rating = self._ratings_csr[user_id, :].data - self._mean_rating
             rating = np.reshape(rating, (rating.shape[0], 1))
 
             # print 'rating', rating.shape

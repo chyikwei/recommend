@@ -35,11 +35,11 @@ def make_ratings(n_users, n_items, min_rating_per_user, max_rating_per_user,
         arr = np.stack([np.repeat(user_id, item_count), item_ids, ratings], axis=1)
         user_arrs.append(arr)
 
-    ret = np.vstack(user_arrs)
-    ret[:, 2] = np.float16(ret[:, 2])
+    ratings = np.array(np.vstack(user_arrs))
+    ratings[:, 2] = ratings[:, 2].astype('float')
     if shuffle:
-        rs.shuffle(ret)
-    return ret
+        rs.shuffle(ratings)
+    return ratings
 
 
 def load_movielens_ratings(ratings_file):

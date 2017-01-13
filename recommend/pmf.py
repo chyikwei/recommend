@@ -13,7 +13,9 @@ import numpy as np
 from numpy.random import RandomState
 from .base import ModelBase
 from .exceptions import NotFittedError
+from .utils.validation import check_ratings
 from .utils.evaluation import RMSE
+
 
 logger = logging.getLogger(__name__)
 
@@ -49,11 +51,13 @@ class PMF(ModelBase):
         self._user_features = 0.3 * self.random_state.rand(n_user, n_feature)
         self._item_features = 0.3 * self.random_state.rand(n_item, n_feature)
 
-    def fit(self, train, n_iters=50):
+    def fit(self, ratings, n_iters=50):
 
-        self._mean_rating = np.mean(train[:, 2])
+        check_ratings(ratings, self.n_user, self.n_item, self.max_rating, self.min_rating)
+
+        self._mean_rating = np.mean(ratings[:, 2])
         last_rmse = None
-        batch_num = int(np.ceil(float(len(train) / self.batch_size)))
+        batch_num = int(np.ceil(float(ratings.shape[0] / self.batch_size)))
         logger.info("batch count = %d", batch_num + 1)
 
         u_feature_grads = np.zeros((self.n_user, self.n_feature))
@@ -65,7 +69,7 @@ class PMF(ModelBase):
             for batch in xrange(batch_num):
                 start_idx = int(batch * self.batch_size)
                 end_idx = int((batch + 1) * self.batch_size)
-                data = train[start_idx:end_idx]
+                data = ratings[start_idx : end_idx]
                 # print "data", data.shape
 
                 # compute gradient
@@ -73,10 +77,9 @@ class PMF(ModelBase):
                 i_features = self._item_features[data[:, 1], :]
                 # print "u_feature", u_features.shape
                 # print "i_feature", i_features.shape
-                ratings = data[:, 2] - self._mean_rating
 
                 preds = np.sum(u_features * i_features, 1)
-                errs = preds - ratings
+                errs = preds - (data[:, 2] - self._mean_rating)
                 err_mat = np.tile(errs, (self.n_feature, 1)).T
                 # print "err_mat", err_mat.shape
 
@@ -98,8 +101,8 @@ class PMF(ModelBase):
                     (self.epsilon / self.batch_size) * i_feature_grads
 
             # compute RMSE
-            train_preds = self.predict(train[:, :2])
-            train_rmse = RMSE(train_preds, train[:, 2])
+            train_preds = self.predict(ratings[:, :2])
+            train_rmse = RMSE(train_preds, ratings[:, 2])
             logger.info("iter: %d, train RMSE: %.6f", iteration, train_rmse)
 
             # stop when converge

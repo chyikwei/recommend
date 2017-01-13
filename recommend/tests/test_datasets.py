@@ -32,6 +32,7 @@ class TestMakeData(unittest.TestCase):
         choices = list(range(1, 10))
         for (n_user, n_item, min_cnt, max_cnt) in zip(user_size, item_size, min_cnts, max_cnts):
             ratings = make_ratings(n_user, n_item, min_cnt, max_cnt, choices)
+            self.assertTrue(isinstance(ratings, np.ndarray))
             self.assertTrue(int(ratings[:, 0].max()) < user_size)
             self.assertTrue(int(ratings[:, 1].max()) < item_size)
             self.assertTrue(ratings[:, 2].max() <= max(choices))
