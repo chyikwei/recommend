@@ -25,7 +25,7 @@ class PMF(ModelBase):
     """Probabilistic Matrix Factorization
     """
 
-    def __init__(self, n_user, n_item, n_feature, batch_size=1e5, epsilon=100.0,
+    def __init__(self, n_user, n_item, n_feature, batch_size=1e5, epsilon=50.0,
                  momentum=0.8, seed=None, reg=1e-2, converge=1e-5,
                  max_rating=None, min_rating=None):
 
@@ -51,8 +51,8 @@ class PMF(ModelBase):
         # data state
         self._mean_rating = None
         # user/item features
-        self._user_features = 0.2 * self.random_state.rand(n_user, n_feature)
-        self._item_features = 0.2 * self.random_state.rand(n_item, n_feature)
+        self._user_features = 0.1 * self.random_state.rand(n_user, n_feature)
+        self._item_features = 0.1 * self.random_state.rand(n_item, n_feature)
 
     def fit(self, ratings, n_iters=50):
 
@@ -61,7 +61,7 @@ class PMF(ModelBase):
         self._mean_rating = np.mean(ratings[:, 2])
         last_rmse = None
         batch_num = int(np.ceil(float(ratings.shape[0] / self.batch_size)))
-        logger.info("batch count = %d", batch_num + 1)
+        logger.debug("batch count = %d", batch_num + 1)
 
         # momentum
         u_feature_mom = np.zeros((self.n_user, self.n_feature))
@@ -70,7 +70,7 @@ class PMF(ModelBase):
         u_feature_grads = np.zeros((self.n_user, self.n_feature))
         i_feature_grads = np.zeros((self.n_item, self.n_feature))
         for iteration in xrange(n_iters):
-            logger.info("iteration %d...", iteration)
+            logger.debug("iteration %d...", iteration)
 
             self.random_state.shuffle(ratings)
 

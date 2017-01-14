@@ -14,9 +14,7 @@ class ModelBase(object):
     @abstractmethod
     def fit(self, train, n_iters):
         """training models"""
-        pass
 
     @abstractmethod
     def predict(self, data):
         """save model"""
-        pass
