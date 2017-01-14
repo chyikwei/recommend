@@ -84,7 +84,7 @@ class BPMF(ModelBase):
 
         last_rmse = None
         for iteration in xrange(n_iters):
-            logger.info("iteration %d...", iteration)
+            logger.debug("iteration %d...", iteration)
 
             # update item & user parameter
             self._update_item_params()

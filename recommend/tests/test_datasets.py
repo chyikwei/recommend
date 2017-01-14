@@ -6,7 +6,9 @@ import scipy.sparse as sparse
 
 from six.moves import xrange
 
-from ..utils.datasets import (load_movielens_ratings, make_ratings,
+from ..utils.datasets import (load_movielens_1m_ratings,
+                              load_movielens_100k_ratings,
+                              make_ratings,
                               build_user_item_matrix)
 
 TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), 'test_data')
@@ -18,7 +20,7 @@ class TestLoadData(unittest.TestCase):
 
     def test_load_movielens_1m_ratings(self):
         test_rating_file = os.path.join(TEST_DATA_DIR, TEST_ML_1M_RATING_FILE)
-        ratings = load_movielens_ratings(test_rating_file, separator='::')
+        ratings = load_movielens_1m_ratings(test_rating_file)
 
         n_row, n_col = ratings.shape
         self.assertEqual(n_row, 1000)
@@ -28,7 +30,7 @@ class TestLoadData(unittest.TestCase):
 
     def test_load_movielens_100k_ratings(self):
         test_rating_file = os.path.join(TEST_DATA_DIR, TEST_ML_100K_RATING_FILE)
-        ratings = load_movielens_ratings(test_rating_file, separator='\t')
+        ratings = load_movielens_100k_ratings(test_rating_file)
 
         n_row, n_col = ratings.shape
         self.assertEqual(n_row, 1000)

@@ -1,10 +1,8 @@
 from six.moves import xrange
+from functools import partial
 import numpy as np
 from numpy.random import RandomState
 import scipy.sparse as sparse
-
-
-ML_100K_DOWNLOAD_URL = 'http://files.grouplens.org/datasets/movielens/ml-100k.zip'
 
 
 def make_ratings(n_users, n_items, min_rating_per_user, max_rating_per_user,
@@ -39,7 +37,7 @@ def make_ratings(n_users, n_items, min_rating_per_user, max_rating_per_user,
     return ratings
 
 
-def load_movielens_ratings(ratings_file, separator='::'):
+def load_movielens_ratings(ratings_file, separator):
     with open(ratings_file) as f:
         ratings = []
         for line in f:
@@ -48,6 +46,9 @@ def load_movielens_ratings(ratings_file, separator='::'):
             ratings.append(line)
         ratings = np.array(ratings)
     return ratings
+
+load_movielens_1m_ratings = partial(load_movielens_ratings, separator="::")
+load_movielens_100k_ratings = partial(load_movielens_ratings, separator="\t")
 
 
 def build_user_item_matrix(n_users, n_items, ratings):
