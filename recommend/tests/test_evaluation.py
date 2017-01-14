@@ -5,7 +5,7 @@ import numpy.testing as np_test
 from numpy.random import RandomState
 
 
-from ..utils.evaluation import RMSE
+from recommend.utils.evaluation import RMSE
 
 
 class TestRMSE(unittest.TestCase):

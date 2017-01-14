@@ -1,7 +1,12 @@
 import os
+import sys
 import gzip
-import cPickle
 import unittest
+
+if sys.version_info[0] == 3:
+    import _pickle as cPickle
+else:
+    import cPickle
 
 from ..utils.datasets import make_ratings
 from ..utils.evaluation import RMSE
@@ -57,7 +62,10 @@ class TestBPMFwithMovieLens100K(unittest.TestCase):
 
         file_path = os.path.join(TEST_DATA_DIR, ML_100K_RATING_PKL)
         with gzip.open(file_path, 'rb') as f:
-            ratings = cPickle.load(f)
+            if sys.version_info[0] == 3:
+                ratings = cPickle.load(f, encoding='latin1')
+            else:
+                ratings = cPickle.load(f)
 
         self.n_user = 943
         self.n_item = 1682

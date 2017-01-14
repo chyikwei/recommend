@@ -1,7 +1,6 @@
-dependencies:
-  pre:
-    - pip install numpy
-    - pip install scipy
+machine:
+  post:
+    - pyenv global 2.7.12 3.4.4 3.5.2
 
 test:
   pre:
@@ -9,7 +8,7 @@ test:
     - pip install coveralls
 
   override:
-    - coverage run --source=recommend setup.py test
+    - tox
 
   post:
     - coveralls

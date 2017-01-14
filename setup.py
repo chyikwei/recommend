@@ -8,7 +8,8 @@ setup(
     url='https://github.com/chyikwei/recommend/',
     install_requires=[
         'numpy>=1.11.0',
-        'scipy>=0.15.0'
+        'scipy>=0.15.0',
+        'six'
     ],
     test_suite='nose.collector',
     tests_require=['nose'],

@@ -4,6 +4,8 @@ import numpy as np
 import numpy.testing as np_test
 import scipy.sparse as sparse
 
+from six.moves import xrange
+
 from ..utils.datasets import (load_movielens_ratings, make_ratings,
                               build_user_item_matrix)
 
@@ -46,8 +48,8 @@ class TestMakeData(unittest.TestCase):
         for (n_user, n_item, min_cnt, max_cnt) in zip(user_size, item_size, min_cnts, max_cnts):
             ratings = make_ratings(n_user, n_item, min_cnt, max_cnt, choices)
             self.assertTrue(isinstance(ratings, np.ndarray))
-            self.assertTrue(int(ratings[:, 0].max()) < user_size)
-            self.assertTrue(int(ratings[:, 1].max()) < item_size)
+            self.assertTrue(int(ratings[:, 0].max()) < n_user)
+            self.assertTrue(int(ratings[:, 1].max()) < n_item)
             self.assertTrue(ratings[:, 2].max() <= max(choices))
             self.assertTrue(ratings[:, 2].min() >= min(choices))
 

@@ -8,6 +8,7 @@ Reference Matlab code: http://www.cs.toronto.edu/~rsalakhu/BPMF.html
 """
 
 import logging
+from six.moves import xrange
 
 import numpy as np
 from numpy.random import RandomState
