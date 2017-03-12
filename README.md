@@ -25,7 +25,7 @@ cd recommend
 
 # install numpy & scipy
 pip install -r requirement
-python setup.py install
+pip install .
 ```
 
 Getting started:
@@ -72,6 +72,12 @@ or run test with coverage:
 ```
 coverage run --source=recommend setup.py test
 coverage report -m
+```
+
+Uninstall:
+----------
+```
+pip uninstall recommend
 ```
 
 Notes:
