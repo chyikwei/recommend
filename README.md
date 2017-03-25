@@ -24,7 +24,7 @@ git clone git@github.com:chyikwei/recommend.git
 cd recommend
 
 # install numpy & scipy
-pip install -r requirement
+pip install -r requirements.txt
 pip install .
 ```
 
