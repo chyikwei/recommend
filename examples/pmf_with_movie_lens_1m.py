@@ -3,9 +3,9 @@ from __future__ import print_function
 import os
 import logging
 import zipfile
-from six.moves import urllib
 
-import numpy as np
+from six.moves import urllib
+from numpy.random import RandomState
 from recommend.pmf import PMF
 from recommend.utils.evaluation import RMSE
 from recommend.utils.datasets import load_movielens_1m_ratings
@@ -16,13 +16,15 @@ ML_1M_URL = "http://files.grouplens.org/datasets/movielens/ml-1m.zip"
 ML_1M_FOLDER = "ml-1m"
 ML_1M_ZIP_SIZE = 24594131
 
+rand_state = RandomState(0)
+
 # download MovieLens 1M dataset if necessary
 def ml_1m_download(folder, file_size):
     file_name = "ratings.dat"
     file_path = os.path.join(os.getcwd(), folder, file_name)
     if not os.path.exists(file_path):
         print("file %s not exists. downloading..." % file_path)
-        zip_name, _ =  urllib.request.urlretrieve(ML_1M_URL, "ml-1m.zip")
+        zip_name, _ = urllib.request.urlretrieve(ML_1M_URL, "ml-1m.zip")
         with zipfile.ZipFile(zip_name, 'r') as zf:
             file_path = zf.extract('ml-1m/ratings.dat')
 
@@ -45,7 +47,7 @@ ratings[:, (0, 1)] -= 1
 
 # split data to training & testing
 train_pct = 0.9
-np.random.shuffle(ratings)
+rand_state.shuffle(ratings)
 train_size = int(train_pct * ratings.shape[0])
 train = ratings[:train_size]
 validation = ratings[train_size:]
@@ -63,5 +65,6 @@ train_preds = pmf.predict(train[:, :2])
 train_rmse = RMSE(train_preds, train[:, 2])
 val_preds = pmf.predict(validation[:, :2])
 val_rmse = RMSE(val_preds, validation[:, 2])
-print("after %d iterations, train RMSE: %.6f, validation RMSE: %.6f" % (eval_iters, train_rmse, val_rmse))
+print("after %d iterations, train RMSE: %.6f, validation RMSE: %.6f" % \
+      (eval_iters, train_rmse, val_rmse))
 
