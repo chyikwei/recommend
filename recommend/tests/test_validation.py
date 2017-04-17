@@ -1,9 +1,9 @@
 import unittest
 import numpy as np
 
-from ..exceptions import DimensionError
-from ..utils.validation import check_ratings
-from ..utils.datasets import make_ratings
+from recommend.exceptions import DimensionError
+from recommend.utils.validation import check_ratings
+from recommend.utils.datasets import make_ratings
 
 
 class TestValidation(unittest.TestCase):
@@ -17,7 +17,7 @@ class TestValidation(unittest.TestCase):
 
     def test_validation(self):
         check_ratings(self.ratings, self.n_user, self.n_item,
-                     max(self.choices), min(self.choices))
+                      max(self.choices), min(self.choices))
 
     def test_validation_error(self):
 

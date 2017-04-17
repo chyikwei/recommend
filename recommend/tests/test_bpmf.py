@@ -8,10 +8,10 @@ if sys.version_info[0] == 3:
 else:
     import cPickle
 
-from ..utils.datasets import make_ratings
-from ..utils.evaluation import RMSE
-from ..bpmf import BPMF
-from ..exceptions import NotFittedError
+from recommend.utils.datasets import make_ratings
+from recommend.utils.evaluation import RMSE
+from recommend.bpmf import BPMF
+from recommend.exceptions import NotFittedError
 
 TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), 'test_data')
 ML_100K_RATING_PKL = "ml_100k_ratings.pkl.gz"

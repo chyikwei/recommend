@@ -6,10 +6,10 @@ import scipy.sparse as sparse
 
 from six.moves import xrange
 
-from ..utils.datasets import (load_movielens_1m_ratings,
-                              load_movielens_100k_ratings,
-                              make_ratings,
-                              build_user_item_matrix)
+from recommend.utils.datasets import (load_movielens_1m_ratings,
+                                      load_movielens_100k_ratings,
+                                      make_ratings,
+                                      build_user_item_matrix)
 
 TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), 'test_data')
 TEST_ML_1M_RATING_FILE = "ml_1m_ratings_sample_1k.dat"
