@@ -61,7 +61,7 @@ array([ 4.35574067,  3.60580936,  3.77778456,  3.4479072 ,  3.60901065,
         4.29750917,  3.66302187,  4.43915423,  3.85788772,  4.02423073])
 ```
 
-Complete example can be found in `examples\` folder. The script will download MovieLens 1M dataset automatically, run PMF(BPMF) model and show training/validation RMSE.
+Complete example can be found in `examples/` folder. The script will download MovieLens 1M dataset automatically, run PMF(BPMF) model and show training/validation RMSE.
 
 
 Running Test:
