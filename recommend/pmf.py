@@ -45,20 +45,23 @@ class PMF(ModelBase):
         # regularization parameter
         self.reg = reg
         self.converge = converge
-        self.max_rating = float(max_rating) if max_rating is not None else max_rating
-        self.min_rating = float(min_rating) if min_rating is not None else min_rating
+        self.max_rating = float(max_rating) \
+            if max_rating is not None else max_rating
+        self.min_rating = float(min_rating) \
+            if min_rating is not None else min_rating
 
         # data state
-        self._mean_rating = None
+        self.mean_rating_ = None
         # user/item features
-        self._user_features = 0.1 * self.random_state.rand(n_user, n_feature)
-        self._item_features = 0.1 * self.random_state.rand(n_item, n_feature)
+        self.user_features_ = 0.1 * self.random_state.rand(n_user, n_feature)
+        self.item_features_ = 0.1 * self.random_state.rand(n_item, n_feature)
 
     def fit(self, ratings, n_iters=50):
 
-        check_ratings(ratings, self.n_user, self.n_item, self.max_rating, self.min_rating)
+        check_ratings(ratings, self.n_user, self.n_item,
+                      self.max_rating, self.min_rating)
 
-        self._mean_rating = np.mean(ratings[:, 2])
+        self.mean_rating_ = np.mean(ratings[:, 2])
         last_rmse = None
         batch_num = int(np.ceil(float(ratings.shape[0] / self.batch_size)))
         logger.debug("batch count = %d", batch_num + 1)
@@ -77,14 +80,15 @@ class PMF(ModelBase):
             for batch in xrange(batch_num):
                 start_idx = int(batch * self.batch_size)
                 end_idx = int((batch + 1) * self.batch_size)
-                data = ratings[start_idx : end_idx]
+                data = ratings[start_idx:end_idx]
 
                 # compute gradient
-                u_features = self._user_features[data[:, 0], :]
-                i_features = self._item_features[data[:, 1], :]
-
+                u_features = self.user_features_.take(
+                    data.take(0, axis=1), axis=0)
+                i_features = self.item_features_.take(
+                    data.take(1, axis=1), axis=0)
                 preds = np.sum(u_features * i_features, 1)
-                errs = preds - (data[:, 2] - self._mean_rating)
+                errs = preds - (data.take(2, axis=1) - self.mean_rating_)
                 err_mat = np.tile(2 * errs, (self.n_feature, 1)).T
                 u_grads = i_features * (err_mat - self.reg)
                 i_grads = u_features * (err_mat - self.reg)
@@ -92,10 +96,9 @@ class PMF(ModelBase):
                 u_feature_grads.fill(0.0)
                 i_feature_grads.fill(0.0)
                 for i in xrange(data.shape[0]):
-                    user = data[i, 0]
-                    item = data[i, 1]
-                    u_feature_grads[user, :] += u_grads[i, :]
-                    i_feature_grads[item, :] += i_grads[i, :]
+                    row = data.take(i, axis=0)
+                    u_feature_grads[row[0], :] += u_grads.take(i, axis=0)
+                    i_feature_grads[row[1], :] += i_grads.take(i, axis=0)
 
                 # update momentum
                 u_feature_mom = (self.momentum * u_feature_mom) + \
@@ -104,8 +107,8 @@ class PMF(ModelBase):
                     ((self.epsilon / data.shape[0]) * i_feature_grads)
 
                 # update latent variables
-                self._user_features -= u_feature_mom
-                self._item_features -= i_feature_mom
+                self.user_features_ -= u_feature_mom
+                self.item_features_ -= i_feature_mom
 
             # compute RMSE
             train_preds = self.predict(ratings[:, :2])
@@ -122,12 +125,12 @@ class PMF(ModelBase):
 
     def predict(self, data):
 
-        if not self._mean_rating:
+        if not self.mean_rating_:
             raise NotFittedError()
 
-        u_features = self._user_features[data[:, 0], :]
-        i_features = self._item_features[data[:, 1], :]
-        preds = np.sum(u_features * i_features, 1) + self._mean_rating
+        u_features = self.user_features_.take(data.take(0, axis=1), axis=0)
+        i_features = self.item_features_.take(data.take(1, axis=1), axis=0)
+        preds = np.sum(u_features * i_features, 1) + self.mean_rating_
 
         if self.max_rating:
             preds[preds > self.max_rating] = self.max_rating

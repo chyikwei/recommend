@@ -29,7 +29,8 @@ class TestLoadData(unittest.TestCase):
         np_test.assert_array_equal(ratings[-1], [10, 1022, 5])
 
     def test_load_movielens_100k_ratings(self):
-        test_rating_file = os.path.join(TEST_DATA_DIR, TEST_ML_100K_RATING_FILE)
+        test_rating_file = os.path.join(
+            TEST_DATA_DIR, TEST_ML_100K_RATING_FILE)
         ratings = load_movielens_100k_ratings(test_rating_file)
 
         n_row, n_col = ratings.shape
@@ -47,7 +48,8 @@ class TestMakeData(unittest.TestCase):
         min_cnts = [1, 5, 10]
         max_cnts = [5, 10, 15]
         choices = list(range(1, 10))
-        for (n_user, n_item, min_cnt, max_cnt) in zip(user_size, item_size, min_cnts, max_cnts):
+        params = zip(user_size, item_size, min_cnts, max_cnts)
+        for (n_user, n_item, min_cnt, max_cnt) in params:
             ratings = make_ratings(n_user, n_item, min_cnt, max_cnt, choices)
             self.assertTrue(isinstance(ratings, np.ndarray))
             self.assertTrue(int(ratings[:, 0].max()) < n_user)

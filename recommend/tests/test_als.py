@@ -3,17 +3,17 @@ import sys
 import gzip
 import unittest
 
-if sys.version_info[0] == 3:
-    import _pickle as cPickle
-else:
-    import cPickle
-
 from numpy.testing import (assert_array_equal,
                            assert_raises)
 from recommend.utils.datasets import make_ratings
 from recommend.utils.evaluation import RMSE
 from recommend.als import ALS
 from recommend.exceptions import NotFittedError
+
+if sys.version_info[0] == 3:
+    import _pickle as cPickle
+else:
+    import cPickle
 
 TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), 'test_data')
 ML_100K_RATING_PKL = "ml_100k_ratings.pkl.gz"
@@ -32,7 +32,8 @@ class TestALS(unittest.TestCase):
         n_user = 100
         n_item = 200
         n_feature = self.n_feature
-        ratings = make_ratings(n_user, n_item, 20, 30, self.rating_choices, seed=self.seed)
+        ratings = make_ratings(
+            n_user, n_item, 20, 30, self.rating_choices, seed=self.seed)
 
         als1 = ALS(n_user, n_item, n_feature,
                    reg=1e-2,
@@ -57,7 +58,8 @@ class TestALS(unittest.TestCase):
         n_user = 100
         n_item = 200
         n_feature = self.n_feature
-        ratings = make_ratings(n_user, n_item, 20, 30, self.rating_choices, seed=self.seed)
+        ratings = make_ratings(
+            n_user, n_item, 20, 30, self.rating_choices, seed=self.seed)
 
         als1 = ALS(n_user, n_item, n_feature,
                    reg=1e-2,
@@ -84,7 +86,8 @@ class TestALS(unittest.TestCase):
         n_user = 100
         n_item = 200
         n_feature = self.n_feature
-        ratings = make_ratings(n_user, n_item, 20, 30, self.rating_choices, seed=self.seed)
+        ratings = make_ratings(
+            n_user, n_item, 20, 30, self.rating_choices, seed=self.seed)
 
         # seed 0
         als1 = ALS(n_user, n_item, n_feature,
@@ -119,7 +122,8 @@ class TestALS(unittest.TestCase):
         n_user = 10
         n_item = 20
         n_feature = self.n_feature
-        ratings = make_ratings(n_user - 1, n_item - 1, 5, 10, self.rating_choices, seed=self.seed)
+        ratings = make_ratings(
+            n_user - 1, n_item - 1, 5, 10, self.rating_choices, seed=self.seed)
         als1 = ALS(n_user, n_item, n_feature,
                    reg=1e-2,
                    seed=0,
@@ -131,13 +135,15 @@ class TestALS(unittest.TestCase):
         als1.fit(ratings, n_iters=1)
         unuse_user_f_after = als1.user_features_[n_user - 1, :]
         unuse_item_f_after = als1.item_features_[n_item - 1, :]
-        # last user/item feature should be unchanged since no rating data on them
+        # last user/item feature should be
+        #  unchanged since no rating data on them
         assert_array_equal(unuse_user_f_before, unuse_user_f_after)
         assert_array_equal(unuse_item_f_before, unuse_item_f_after)
 
     def test_als_not_fitted_err(self):
         with self.assertRaises(NotFittedError):
-            ratings = make_ratings(10, 10, 1, 5, self.rating_choices, seed=self.seed)
+            ratings = make_ratings(
+                10, 10, 1, 5, self.rating_choices, seed=self.seed)
             als = ALS(10, 10, self.n_feature)
             als.predict(ratings[:, :2])
 

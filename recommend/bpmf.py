@@ -1,6 +1,6 @@
 """
 Reference paper: "Bayesian Probabilistic Matrix Factorization using MCMC"
-                 R. Salakhutdinov and A.Mnih.  
+                 R. Salakhutdinov and A.Mnih.
                  25th International Conference on Machine Learning (ICML-2008)
 
 Reference Matlab code: http://www.cs.toronto.edu/~rsalakhu/BPMF.html
@@ -63,25 +63,27 @@ class BPMF(ModelBase):
         self.alpha_user = np.eye(n_feature, dtype='float64')
         self.alpha_item = np.eye(n_feature, dtype='float64')
 
-        self.user_features = 0.3 * self.rand_state.rand(n_user, n_feature)
-        self.item_features = 0.3 * self.rand_state.rand(n_item, n_feature)
+        self.user_features_ = 0.3 * self.rand_state.rand(n_user, n_feature)
+        self.item_features_ = 0.3 * self.rand_state.rand(n_item, n_feature)
 
         # data state
-        self._mean_rating = None
-        self._ratings_csr = None
-        self._ratings_csc = None
+        self.mean_rating_ = None
+        self.ratings_csr_ = None
+        self.ratings_csc_ = None
 
     def fit(self, ratings, n_iters=50):
         """training models"""
 
-        check_ratings(ratings, self.n_user, self.n_item, self.max_rating, self.min_rating)
+        check_ratings(ratings, self.n_user, self.n_item,
+                      self.max_rating, self.min_rating)
 
-        self._mean_rating = np.mean(ratings[:, 2])
+        self.mean_rating_ = np.mean(ratings[:, 2])
 
         # csr user-item matrix for fast row access (user update)
-        self._ratings_csr = build_user_item_matrix(self.n_user, self.n_item, ratings)
+        self.ratings_csr_ = build_user_item_matrix(
+            self.n_user, self.n_item, ratings)
         # keep a csc matrix for fast col access (item update)
-        self._ratings_csc = self._ratings_csr.tocsc()
+        self.ratings_csc_ = self.ratings_csr_.tocsc()
 
         last_rmse = None
         for iteration in xrange(n_iters):
@@ -112,12 +114,12 @@ class BPMF(ModelBase):
 
     def predict(self, data):
 
-        if not self._mean_rating:
+        if not self.mean_rating_:
             raise NotFittedError()
 
-        u_features = self.user_features[data[:, 0], :]
-        i_features = self.item_features[data[:, 1], :]
-        preds = np.sum(u_features * i_features, 1) + self._mean_rating
+        u_features = self.user_features_.take(data.take(0, axis=1), axis=0)
+        i_features = self.item_features_.take(data.take(1, axis=1), axis=0)
+        preds = np.sum(u_features * i_features, 1) + self.mean_rating_
 
         if self.max_rating:
             preds[preds > self.max_rating] = self.max_rating
@@ -129,17 +131,17 @@ class BPMF(ModelBase):
 
     def _update_item_params(self):
         N = self.n_item
-        X_bar = np.mean(self.item_features, 0).reshape((self.n_feature, 1))
+        X_bar = np.mean(self.item_features_, 0).reshape((self.n_feature, 1))
         # print 'X_bar', X_bar.shape
-        S_bar = np.cov(self.item_features.T)
+        S_bar = np.cov(self.item_features_.T)
         # print 'S_bar', S_bar.shape
 
         diff_X_bar = self.mu0_item - X_bar
 
         # W_{0}_star
-        WI_post = inv(inv(self.WI_item) + \
-                      N * S_bar + \
-                      np.dot(diff_X_bar, diff_X_bar.T) * \
+        WI_post = inv(inv(self.WI_item) +
+                      N * S_bar +
+                      np.dot(diff_X_bar, diff_X_bar.T) *
                       (N * self.beta_item) / (self.beta_item + N))
 
         # Note: WI_post and WI_post.T should be the same.
@@ -155,22 +157,23 @@ class BPMF(ModelBase):
             (self.beta_item + N)
         mu_var = cholesky(inv(np.dot(self.beta_item + N, self.alpha_item)))
         # print 'lam', lam.shape
-        self.mu_item = mu_mean + np.dot(mu_var, self.rand_state.randn(self.n_feature, 1))
+        self.mu_item = mu_mean + np.dot(
+            mu_var, self.rand_state.randn(self.n_feature, 1))
         # print 'mu_item', self.mu_item.shape
 
     def _update_user_params(self):
         # same as _update_user_params
         N = self.n_user
-        X_bar = np.mean(self.user_features, 0).reshape((self.n_feature, 1))
-        S_bar = np.cov(self.user_features.T)
+        X_bar = np.mean(self.user_features_, 0).reshape((self.n_feature, 1))
+        S_bar = np.cov(self.user_features_.T)
 
         # mu_{0} - U_bar
         diff_X_bar = self.mu0_user - X_bar
 
         # W_{0}_star
-        WI_post = inv(inv(self.WI_user) + \
-                      N * S_bar + \
-                      np.dot(diff_X_bar, diff_X_bar.T) * \
+        WI_post = inv(inv(self.WI_user) +
+                      N * S_bar +
+                      np.dot(diff_X_bar, diff_X_bar.T) *
                       (N * self.beta_user) / (self.beta_user + N))
         # Note: WI_post and WI_post.T should be the same.
         #       Just make sure it is symmertic here
@@ -189,42 +192,45 @@ class BPMF(ModelBase):
         # decomposed inv(beta_{0}_star * LAMBDA_{U})
         mu_var = cholesky(inv(np.dot(self.beta_user + N, self.alpha_user)))
         # sample multivariate gaussian
-        self.mu_user = mu_mean + np.dot(mu_var, self.rand_state.randn(self.n_feature, 1))
+        self.mu_user = mu_mean + np.dot(
+            mu_var, self.rand_state.randn(self.n_feature, 1))
 
     def _udpate_item_features(self):
         # Gibbs sampling for item features
         for item_id in xrange(self.n_item):
-            indices = self._ratings_csc[:, item_id].indices
-            features = self.user_features[indices, :]
-            rating = self._ratings_csc[:, item_id].data - self._mean_rating
+            indices = self.ratings_csc_[:, item_id].indices
+            features = self.user_features_[indices, :]
+            rating = self.ratings_csc_[:, item_id].data - self.mean_rating_
             rating = np.reshape(rating, (rating.shape[0], 1))
 
-            covar = inv(
-                self.alpha_item + self.beta * np.dot(features.T, features))
+            covar = inv(self.alpha_item +
+                        self.beta * np.dot(features.T, features))
             lam = cholesky(covar)
 
-            temp = self.beta * \
-                np.dot(features.T, rating) + np.dot(
-                    self.alpha_item, self.mu_item)
+            temp = (self.beta * np.dot(features.T, rating) +
+                    np.dot(self.alpha_item, self.mu_item))
+
             mean = np.dot(covar, temp)
-            temp_feature = mean + np.dot(lam, self.rand_state.randn(self.n_feature, 1))
-            self.item_features[item_id, :] = temp_feature.reshape((self.n_feature,))
+            temp_feature = mean + np.dot(
+                lam, self.rand_state.randn(self.n_feature, 1))
+            self.item_features_[item_id, :] = temp_feature.ravel()
 
     def _update_user_features(self):
         # Gibbs sampling for user features
         for user_id in xrange(self.n_user):
-            indices = self._ratings_csr[user_id, :].indices
-            features = self.item_features[indices, :]
-            rating = self._ratings_csr[user_id, :].data - self._mean_rating
+            indices = self.ratings_csr_[user_id, :].indices
+            features = self.item_features_[indices, :]
+            rating = self.ratings_csr_[user_id, :].data - self.mean_rating_
             rating = np.reshape(rating, (rating.shape[0], 1))
 
             covar = inv(
                 self.alpha_user + self.beta * np.dot(features.T, features))
             lam = cholesky(covar)
             # aplha * sum(V_j * R_ij) + LAMBDA_U * mu_u
-            temp = self.beta * np.dot(features.T, rating) + \
-                   np.dot(self.alpha_user, self.mu_user)
+            temp = (self.beta * np.dot(features.T, rating) +
+                    np.dot(self.alpha_user, self.mu_user))
             # mu_i_star
             mean = np.dot(covar, temp)
-            temp_feature = mean + np.dot(lam, self.rand_state.randn(self.n_feature, 1))
-            self.user_features[user_id, :] = temp_feature.reshape((self.n_feature,))
+            temp_feature = mean + np.dot(
+                lam, self.rand_state.randn(self.n_feature, 1))
+            self.user_features_[user_id, :] = temp_feature.ravel()

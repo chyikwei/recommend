@@ -12,8 +12,8 @@ class TestValidation(unittest.TestCase):
         self.n_user = 200
         self.n_item = 100
         self.choices = list(range(1, 10))
-        self.ratings = make_ratings(self.n_user, self.n_item, 10, 20, self.choices)
-
+        self.ratings = make_ratings(
+            self.n_user, self.n_item, 10, 20, self.choices)
 
     def test_validation(self):
         check_ratings(self.ratings, self.n_user, self.n_item,

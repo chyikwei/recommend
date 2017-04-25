@@ -3,15 +3,15 @@ import sys
 import gzip
 import unittest
 
-if sys.version_info[0] == 3:
-    import _pickle as cPickle
-else:
-    import cPickle
-
 from recommend.utils.datasets import make_ratings
 from recommend.utils.evaluation import RMSE
 from recommend.bpmf import BPMF
 from recommend.exceptions import NotFittedError
+
+if sys.version_info[0] == 3:
+    import _pickle as cPickle
+else:
+    import cPickle
 
 TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), 'test_data')
 ML_100K_RATING_PKL = "ml_100k_ratings.pkl.gz"
@@ -29,7 +29,8 @@ class TestBPMF(unittest.TestCase):
     def test_bpmf_with_random_data(self):
         n_user = 1000
         n_item = 2000
-        ratings = make_ratings(n_user, n_item, 20, 30, self.rating_choices, seed=self.seed)
+        ratings = make_ratings(
+            n_user, n_item, 20, 30, self.rating_choices, seed=self.seed)
 
         bpmf1 = BPMF(n_user, n_item, self.n_feature,
                      max_rating=self.max_rat,
@@ -44,13 +45,40 @@ class TestBPMF(unittest.TestCase):
                      min_rating=self.min_rat,
                      seed=self.seed)
 
-        bpmf2.fit(ratings, n_iters=10)
+        bpmf2.fit(ratings, n_iters=3)
         rmse_2 = RMSE(bpmf2.predict(ratings[:, :2]), ratings[:, 2])
         self.assertTrue(rmse_1 > rmse_2)
 
-    def test_not_fitted_err(self):
+    def test_bpmf_convergence(self):
+        n_user = 100
+        n_item = 200
+        n_feature = self.n_feature
+        ratings = make_ratings(
+            n_user, n_item, 20, 30, self.rating_choices, seed=self.seed)
+
+        bpmf1 = BPMF(n_user, n_item, n_feature,
+                     seed=0,
+                     max_rating=self.max_rat,
+                     min_rating=self.min_rat,
+                     converge=1e-2)
+
+        bpmf1.fit(ratings, n_iters=5)
+        rmse_1 = RMSE(bpmf1.predict(ratings[:, :2]), ratings[:, 2])
+
+        bpmf2 = BPMF(n_user, n_item, n_feature,
+                     seed=0,
+                     max_rating=self.max_rat,
+                     min_rating=self.min_rat,
+                     converge=1e-1)
+
+        bpmf2.fit(ratings, n_iters=5)
+        rmse_2 = RMSE(bpmf2.predict(ratings[:, :2]), ratings[:, 2])
+        self.assertTrue(rmse_1 < rmse_2)
+
+    def test_bpmf_not_fitted_err(self):
         with self.assertRaises(NotFittedError):
-            ratings = make_ratings(10, 10, 1, 5, self.rating_choices, seed=self.seed)
+            ratings = make_ratings(
+                10, 10, 1, 5, self.rating_choices, seed=self.seed)
             bpmf = BPMF(10, 10, self.n_feature)
             bpmf.predict(ratings[:, :2])
 
@@ -91,6 +119,6 @@ class TestBPMFwithMovieLens100K(unittest.TestCase):
                     min_rating=1.,
                     seed=self.seed)
 
-        bpmf.fit(ratings, n_iters=20)
+        bpmf.fit(ratings, n_iters=15)
         rmse = RMSE(bpmf.predict(ratings[:, :2]), ratings[:, 2])
         self.assertTrue(rmse < 0.85)

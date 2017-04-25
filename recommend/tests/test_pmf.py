@@ -3,15 +3,15 @@ import sys
 import gzip
 import unittest
 
-if sys.version_info[0] == 3:
-    import _pickle as cPickle
-else:
-    import cPickle
-
 from recommend.utils.datasets import make_ratings
 from recommend.utils.evaluation import RMSE
 from recommend.pmf import PMF
 from recommend.exceptions import NotFittedError
+
+if sys.version_info[0] == 3:
+    import _pickle as cPickle
+else:
+    import cPickle
 
 TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), 'test_data')
 ML_100K_RATING_PKL = "ml_100k_ratings.pkl.gz"
@@ -30,7 +30,8 @@ class TestPMF(unittest.TestCase):
         n_user = 1000
         n_item = 2000
         n_feature = self.n_feature
-        ratings = make_ratings(n_user, n_item, 20, 30, self.rating_choices, seed=self.seed)
+        ratings = make_ratings(
+            n_user, n_item, 20, 30, self.rating_choices, seed=self.seed)
 
         pmf1 = PMF(n_user, n_item, n_feature,
                    batch_size=1000.,
@@ -49,13 +50,40 @@ class TestPMF(unittest.TestCase):
                    max_rating=self.max_rat,
                    min_rating=self.min_rat)
 
-        pmf2.fit(ratings, n_iters=10)
+        pmf2.fit(ratings, n_iters=3)
         rmse_2 = RMSE(pmf2.predict(ratings[:, :2]), ratings[:, 2])
         self.assertTrue(rmse_1 > rmse_2)
 
-    def test_not_fitted_err(self):
+    def test_pmf_convergence(self):
+        n_user = 100
+        n_item = 200
+        n_feature = self.n_feature
+        ratings = make_ratings(
+            n_user, n_item, 20, 30, self.rating_choices, seed=self.seed)
+
+        pmf1 = PMF(n_user, n_item, n_feature,
+                   seed=0,
+                   max_rating=self.max_rat,
+                   min_rating=self.min_rat,
+                   converge=1e-2)
+
+        pmf1.fit(ratings, n_iters=5)
+        rmse_1 = RMSE(pmf1.predict(ratings[:, :2]), ratings[:, 2])
+
+        pmf2 = PMF(n_user, n_item, n_feature,
+                   seed=0,
+                   max_rating=self.max_rat,
+                   min_rating=self.min_rat,
+                   converge=1e-1)
+
+        pmf2.fit(ratings, n_iters=5)
+        rmse_2 = RMSE(pmf2.predict(ratings[:, :2]), ratings[:, 2])
+        self.assertTrue(rmse_1 < rmse_2)
+
+    def test_pmf_not_fitted_err(self):
         with self.assertRaises(NotFittedError):
-            ratings = make_ratings(10, 10, 1, 5, self.rating_choices, seed=self.seed)
+            ratings = make_ratings(
+                10, 10, 1, 5, self.rating_choices, seed=self.seed)
             bpmf = PMF(10, 10, self.n_feature)
             bpmf.predict(ratings[:, :2])
 
@@ -93,12 +121,12 @@ class TestPMFwithMovieLens100K(unittest.TestCase):
 
         pmf = PMF(n_user, n_item, n_feature,
                   batch_size=1e4,
-                  epsilon=10.,
+                  epsilon=20.,
                   reg=1e-4,
                   max_rating=5.,
                   min_rating=1.,
                   seed=self.seed)
 
-        pmf.fit(ratings, n_iters=20)
+        pmf.fit(ratings, n_iters=15)
         rmse = RMSE(pmf.predict(ratings[:, :2]), ratings[:, 2])
         self.assertTrue(rmse < 0.85)

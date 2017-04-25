@@ -14,20 +14,23 @@ def make_ratings(n_users, n_items, min_rating_per_user, max_rating_per_user,
         ndarray with shape (n_samples, 3)
 
     """
-    if not (isinstance(rating_choices, list) or isinstance(rating_choices, tuple)):
+    if not (isinstance(rating_choices, list) or
+            isinstance(rating_choices, tuple)):
         raise ValueError("'rating_choices' must be a list or tuple")
     if min_rating_per_user < 0 or min_rating_per_user >= n_items:
         raise ValueError("invalid 'min_rating_per_user' invalid")
-    if min_rating_per_user > max_rating_per_user or max_rating_per_user >= n_items:
+    if (min_rating_per_user > max_rating_per_user) or \
+       (max_rating_per_user >= n_items):
         raise ValueError("invalid 'max_rating_per_user' invalid")
 
     rs = RandomState(seed=seed)
     user_arrs = []
     for user_id in xrange(n_users):
-        item_count = rs.randint(min_rating_per_user, max_rating_per_user) 
+        item_count = rs.randint(min_rating_per_user, max_rating_per_user)
         item_ids = rs.choice(n_items, item_count, replace=False)
         ratings = rs.choice(rating_choices, item_count)
-        arr = np.stack([np.repeat(user_id, item_count), item_ids, ratings], axis=1)
+        arr = np.stack(
+            [np.repeat(user_id, item_count), item_ids, ratings], axis=1)
         user_arrs.append(arr)
 
     ratings = np.array(np.vstack(user_arrs))

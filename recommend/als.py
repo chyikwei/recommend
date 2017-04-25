@@ -56,8 +56,8 @@ class ALS(ModelBase):
             item_features = self.item_features_.take(item_idx, axis=0)
             ratings = self.ratings_csr_[i, :].data - self.mean_rating_
 
-            A_i = np.dot(item_features.T, item_features) + \
-                  self.reg * n_u * np.eye(self.n_feature)
+            A_i = (np.dot(item_features.T, item_features) +
+                   self.reg * n_u * np.eye(self.n_feature))
             V_i = np.dot(item_features.T, ratings)
             self.user_features_[i, :] = np.dot(inv(A_i), V_i)
 
@@ -74,17 +74,19 @@ class ALS(ModelBase):
             user_features = self.user_features_.take(user_idx, axis=0)
             ratings = self.ratings_csc_[:, j].data - self.mean_rating_
 
-            A_j = np.dot(user_features.T, user_features) + \
-                  self.reg * n_i * np.eye(self.n_feature)
+            A_j = (np.dot(user_features.T, user_features) +
+                   self.reg * n_i * np.eye(self.n_feature))
             V_j = np.dot(user_features.T, ratings)
             self.item_features_[j, :] = np.dot(inv(A_j), V_j)
 
     def fit(self, ratings, n_iters=50):
 
-        check_ratings(ratings, self.n_user, self.n_item, self.max_rating, self.min_rating)
+        check_ratings(ratings, self.n_user, self.n_item,
+                      self.max_rating, self.min_rating)
         self.mean_rating_ = np.mean(ratings.take(2, axis=1))
         # csr user-item matrix for fast row access (user update)
-        self.ratings_csr_ = build_user_item_matrix(self.n_user, self.n_item, ratings)
+        self.ratings_csr_ = build_user_item_matrix(
+            self.n_user, self.n_item, ratings)
         # keep a csc matrix for fast col access (item update)
         self.ratings_csc_ = self.ratings_csr_.tocsc()
 
