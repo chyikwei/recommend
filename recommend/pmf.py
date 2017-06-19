@@ -90,8 +90,8 @@ class PMF(ModelBase):
                 preds = np.sum(u_features * i_features, 1)
                 errs = preds - (data.take(2, axis=1) - self.mean_rating_)
                 err_mat = np.tile(2 * errs, (self.n_feature, 1)).T
-                u_grads = i_features * (err_mat - self.reg)
-                i_grads = u_features * (err_mat - self.reg)
+                u_grads = i_features * err_mat + self.reg * u_features
+                i_grads = u_features * err_mat + self.reg * i_features
 
                 u_feature_grads.fill(0.0)
                 i_feature_grads.fill(0.0)
