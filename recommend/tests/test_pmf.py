@@ -65,7 +65,7 @@ class TestPMF(unittest.TestCase):
                    seed=0,
                    max_rating=self.max_rat,
                    min_rating=self.min_rat,
-                   converge=1e-2)
+                   converge=1e-5)
 
         pmf1.fit(ratings, n_iters=5)
         rmse_1 = RMSE(pmf1.predict(ratings[:, :2]), ratings[:, 2])
