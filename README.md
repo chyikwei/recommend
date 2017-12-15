@@ -33,7 +33,9 @@ pip install .
 Getting started:
 ----------------
 
-To run BPMF with MovieLens 1M dataset:
+- A jupyter notbook that compares PMF and BPMF model can be found [here](https://github.com/chyikwei/recommend/blob/master/examples/compare_pmf_bpmf.ipynb).
+
+- To run BPMF with MovieLens 1M dataset:
 First, download MovieLens 1M dataset and unzip it (data will be in `ml-1m` folder).
 Then run:
 
@@ -61,7 +63,7 @@ array([ 4.35574067,  3.60580936,  3.77778456,  3.4479072 ,  3.60901065,
         4.29750917,  3.66302187,  4.43915423,  3.85788772,  4.02423073])
 ```
 
-Complete example can be found in `examples/` folder. The script will download MovieLens 1M dataset automatically, run PMF(BPMF) model and show training/validation RMSE.
+- Complete examples can be found in `examples/` folder. The scripts will download MovieLens 1M dataset automatically, run PMF(BPMF) model and show training/validation RMSE.
 
 
 Running Test:
