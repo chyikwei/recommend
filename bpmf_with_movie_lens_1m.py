@@ -8,6 +8,7 @@ from numpy.random import RandomState
 from recommend.bpmf import BPMF
 from recommend.utils.evaluation import RMSE
 from recommend.utils.datasets import load_movielens_1m_ratings
+import pandas as pd
 
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 
@@ -53,18 +54,23 @@ train_size = int(train_pct * ratings.shape[0])
 train = ratings[:train_size]
 validation = ratings[train_size:]
 
-# models settings
-n_feature = 100
+# models settings; do now the loop over several n_features. 
+results = pd.DataFrame(columns=['Number of features', 'Train RMSE', 'Test RMSE'])
+n_features_list = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
 eval_iters = 50
-print("n_user: %d, n_item: %d, n_feature: %d, training size: %d, validation size: %d" % (
-    n_user, n_item, n_feature, train.shape[0], validation.shape[0]))
-bpmf = BPMF(n_user=n_user, n_item=n_item, n_feature=n_feature,
-            max_rating=5., min_rating=1., seed=0)
+for n_feature in n_features_list: 
+    print("n_user: %d, n_item: %d, n_feature: %d, training size: %d, validation size: %d" % (
+        n_user, n_item, n_feature, train.shape[0], validation.shape[0]))
+    bpmf = BPMF(n_user=n_user, n_item=n_item, n_feature=n_feature,
+                max_rating=5., min_rating=1., seed=0)
 
-bpmf.fit(train, n_iters=eval_iters)
-train_preds = bpmf.predict(train[:, :2])
-train_rmse = RMSE(train_preds, train[:, 2])
-val_preds = bpmf.predict(validation[:, :2])
-val_rmse = RMSE(val_preds, validation[:, 2])
-print("after %d iteration, train RMSE: %.6f, validation RMSE: %.6f" %
-      (eval_iters, train_rmse, val_rmse))
+    train_rmse_list, test_rmse_list = bpmf.fit(train, validation, n_iters=eval_iters)
+    
+    row = pd.DataFrame({'Number of features' : n_feature, 
+                         'Train RMSE': train_rmse_list, 
+                         'Test RMSE': test_rmse_list}) 
+    results = results.append(row)
+    results.to_csv("results/1M_movielens_features{}_iterations{}.csv".format(n_features_list, eval_iters))    
+    
+    # print("after %d iteration, train RMSE: %.6f, validation RMSE: %.6f" %
+    #     (eval_iters, train_rmse, val_rmse))
