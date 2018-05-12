@@ -28,7 +28,7 @@ class BPMF(ModelBase):
 
     def __init__(self, n_user, n_item, n_feature, beta=2.0, beta_user=2.0,
                  df_user=None, mu0_user=0., beta_item=2.0, df_item=None,
-                 mu0_item=0., converge=1e-5, seed=None, max_rating=None,
+                 mu0_item=0., converge=1e-5, seed=None, max_rating=None,  # seed is useful for reproducibility.
                  min_rating=None):
 
         super(BPMF, self).__init__()
@@ -48,7 +48,7 @@ class BPMF(ModelBase):
         self.WI_user = np.eye(n_feature, dtype='float64')
         self.beta_user = beta_user
         self.df_user = int(df_user) if df_user is not None else n_feature
-        self.mu0_user = np.repeat(mu0_user, n_feature).reshape(n_feature, 1)
+        self.mu0_user = np.repeat(mu0_user, n_feature).reshape(n_feature, 1)  # a vector
 
         # Inv-Whishart (item features)
         self.WI_item = np.eye(n_feature, dtype='float64')
@@ -60,10 +60,10 @@ class BPMF(ModelBase):
         self.mu_user = np.zeros((n_feature, 1), dtype='float64')
         self.mu_item = np.zeros((n_feature, 1), dtype='float64')
 
-        self.alpha_user = np.eye(n_feature, dtype='float64')
+        self.alpha_user = np.eye(n_feature, dtype='float64')  # These are probably the Lambda matrices
         self.alpha_item = np.eye(n_feature, dtype='float64')
 
-        self.user_features_ = 0.3 * self.rand_state.rand(n_user, n_feature)
+        self.user_features_ = 0.3 * self.rand_state.rand(n_user, n_feature)  # initializes the user features randomly. Why 0.3??
         self.item_features_ = 0.3 * self.rand_state.rand(n_item, n_feature)
 
         # data state
@@ -71,24 +71,31 @@ class BPMF(ModelBase):
         self.ratings_csr_ = None
         self.ratings_csc_ = None
 
-    def fit(self, ratings, n_iters=50):
-        """training models"""
+    def fit(self, ratings, test_ratings=None, n_iters=50):
+        """training models; I modified it such that if you also pass test_ratings, it computes the test RMSE at each step. """
 
-        check_ratings(ratings, self.n_user, self.n_item,
+        check_ratings(ratings, self.n_user, self.n_item,  # checks if ratings matrix is OK
                       self.max_rating, self.min_rating)
 
         self.mean_rating_ = np.mean(ratings[:, 2])
 
+        # only two different ways of building the matrix. 
         # csr user-item matrix for fast row access (user update)
         self.ratings_csr_ = build_user_item_matrix(
             self.n_user, self.n_item, ratings)
         # keep a csc matrix for fast col access (item update)
-        self.ratings_csc_ = self.ratings_csr_.tocsc()
-
+        self.ratings_csc_ = self.ratings_csr_.tocsc() 
+    
+        train_rmse_list = []
+        if test_ratings is not None: 
+            test_rmse_list = []
+        
         last_rmse = None
         for iteration in xrange(n_iters):
             logger.debug("iteration %d...", iteration)
 
+            # THE FOLLOWING ARE THE GIBBS SAMPLING STEP 
+        
             # update item & user parameter
             self._update_item_params()
             self._update_user_params()
@@ -96,21 +103,30 @@ class BPMF(ModelBase):
             # update item & user features
             self._udpate_item_features()
             self._update_user_features()
-
-            # compute RMSE
+            
+            # compute RMSE; NB: at each step, this code just predicts the R matrix using U, V but does not make the average over more 
+            # prediction steps, as it should. This is not how MCMC works!!!
             train_preds = self.predict(ratings[:, :2])
             train_rmse = RMSE(train_preds, ratings[:, 2])
-            train_preds = self.predict(ratings[:, :2])
-            train_rmse = RMSE(train_preds, ratings[:, 2])
-            logger.info("iter: %d, train RMSE: %.6f", iteration, train_rmse)
+            train_rmse_list.append(train_rmse)
+            if test_ratings is not None: 
+                test_preds = self.predict(test_ratings[:, :2])
+                test_rmse = RMSE(test_preds, test_ratings[:, 2])
+                test_rmse_list.append(test_rmse)
+                logger.info("iter: %d, train RMSE: %.6f, test RMSE: %.6f", iteration, train_rmse, test_rmse)
+            else: 
+                logger.info("iter: %d, train RMSE: %.6f", iteration, train_rmse)
 
             # stop when converge
-            if last_rmse and abs(train_rmse - last_rmse) < self.converge:
+            if last_rmse and abs(train_rmse - last_rmse) < self.converge:  # if you get convergence -> stop
                 logger.info('converges at iteration %d. stop.', iteration)
                 break
             else:
                 last_rmse = train_rmse
-        return self
+        if test_ratings is not None: 
+            return train_rmse_list, test_rmse_list
+        else: 
+            return train_rmse_list
 
     def predict(self, data):
 
@@ -121,7 +137,7 @@ class BPMF(ModelBase):
         i_features = self.item_features_.take(data.take(1, axis=1), axis=0)
         preds = np.sum(u_features * i_features, 1) + self.mean_rating_
 
-        if self.max_rating:
+        if self.max_rating:  # cut the prediction rate. 
             preds[preds > self.max_rating] = self.max_rating
 
         if self.min_rating:
@@ -200,7 +216,7 @@ class BPMF(ModelBase):
         for item_id in xrange(self.n_item):
             indices = self.ratings_csc_[:, item_id].indices
             features = self.user_features_[indices, :]
-            rating = self.ratings_csc_[:, item_id].data - self.mean_rating_
+            rating = self.ratings_csc_[:, item_id].data - self.mean_rating_  # IT SUBTRACTS mean_rating_ AND ADD IT AGAIN LATER.
             rating = np.reshape(rating, (rating.shape[0], 1))
 
             covar = inv(self.alpha_item +

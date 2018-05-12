@@ -12,7 +12,8 @@ from recommend.utils.datasets import load_movielens_1m_ratings
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 
 ML_1M_URL = "http://files.grouplens.org/datasets/movielens/ml-1m.zip"
-ML_1M_FOLDER = "ml-1m"
+# ML_1M_FOLDER = "ml-1m"
+ML_1M_FOLDER = "/home/lorenzo/BPMF/my_code/data/1M-dataset"
 ML_1M_ZIP_SIZE = 24594131
 
 rand_state = RandomState(0)
@@ -53,8 +54,8 @@ train = ratings[:train_size]
 validation = ratings[train_size:]
 
 # models settings
-n_feature = 10
-eval_iters = 20
+n_feature = 100
+eval_iters = 50
 print("n_user: %d, n_item: %d, n_feature: %d, training size: %d, validation size: %d" % (
     n_user, n_item, n_feature, train.shape[0], validation.shape[0]))
 bpmf = BPMF(n_user=n_user, n_item=n_item, n_feature=n_feature,
