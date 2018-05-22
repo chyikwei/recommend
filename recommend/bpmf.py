@@ -28,7 +28,7 @@ class BPMF(ModelBase):
 
     def __init__(self, n_user, n_item, n_feature, beta=2.0, beta_user=2.0,
                  df_user=None, mu0_user=0., beta_item=2.0, df_item=None,
-                 mu0_item=0., converge=1e-5, seed=None, max_rating=None,  # seed is useful for reproducibility.
+                 mu0_item=0., converge=1e-5, seed=None, max_rating=None,
                  min_rating=None):
 
         super(BPMF, self).__init__()
@@ -60,21 +60,33 @@ class BPMF(ModelBase):
         self.mu_user = np.zeros((n_feature, 1), dtype='float64')
         self.mu_item = np.zeros((n_feature, 1), dtype='float64')
 
-        self.alpha_user = np.eye(n_feature, dtype='float64')  # These are probably the Lambda matrices
+        self.alpha_user = np.eye(n_feature, dtype='float64')
         self.alpha_item = np.eye(n_feature, dtype='float64')
 
-        self.user_features_ = 0.3 * self.rand_state.rand(n_user, n_feature)  # initializes the user features randomly. Why 0.3??
+        # initializes the user features randomly.
+        # (There is no special reason to use 0.3)
+        self.user_features_ = 0.3 * self.rand_state.rand(n_user, n_feature)
         self.item_features_ = 0.3 * self.rand_state.rand(n_item, n_feature)
 
+        # average user/item features
+        self.avg_user_features_ = np.zeros((n_user, n_feature))
+        self.avg_item_features_ = np.zeros((n_item, n_feature))
+
         # data state
+        self.iter_ = 0
         self.mean_rating_ = None
         self.ratings_csr_ = None
         self.ratings_csc_ = None
 
-    def fit(self, ratings, test_ratings=None, n_iters=50):
-        """training models; I modified it such that if you also pass test_ratings, it computes the test RMSE at each step. """
+    def _update_average_features(self, iteration):
+        self.avg_user_features_ *= (iteration / (iteration + 1.))
+        self.avg_user_features_ += (self.user_features_ / (iteration + 1.))
+        self.avg_item_features_ *= (iteration / (iteration + 1.))
+        self.avg_item_features_ += (self.item_features_ / (iteration + 1.))
 
-        check_ratings(ratings, self.n_user, self.n_item,  # checks if ratings matrix is OK
+    def fit(self, ratings, n_iters=50):
+
+        check_ratings(ratings, self.n_user, self.n_item,
                       self.max_rating, self.min_rating)
 
         self.mean_rating_ = np.mean(ratings[:, 2])
@@ -85,23 +97,10 @@ class BPMF(ModelBase):
             self.n_user, self.n_item, ratings)
         # keep a csc matrix for fast col access (item update)
         self.ratings_csc_ = self.ratings_csr_.tocsc() 
-    
-        # lists in where I will save the rmse during training
-        train_rmse_list = []
-        if test_ratings is not None: 
-            test_rmse_list = []
-            
-        # define the lists that will contain the total predictions for training and test set
-        train_preds_total = np.zeros(len(ratings)).tolist()
-        if test_ratings is not None: 
-            test_preds_total = np.zeros(len(test_ratings)).tolist()
-        
+
         last_rmse = None
         for iteration in xrange(n_iters):
-            logger.debug("iteration %d...", iteration)
-
             # THE FOLLOWING ARE THE GIBBS SAMPLING STEP 
-        
             # update item & user parameter
             self._update_item_params()
             self._update_user_params()
@@ -109,106 +108,30 @@ class BPMF(ModelBase):
             # update item & user features
             self._udpate_item_features()
             self._update_user_features()
-            
-            # compute RMSE 
-            train_preds = self.predict(ratings[:, :2])
 
-            # in order to make a meaningful MCMC, you need to do this, to sample from the correct distribution; to do this, you have 
-            # to average over all previous predictions:
-            
-            train_preds_total = ((np.array(train_preds_total) * iteration + np.array(train_preds))/(iteration + 1)).tolist()
-            train_rmse = RMSE(train_preds_total, ratings[:, 2])
-            
-            train_rmse_list.append(train_rmse)
-            if test_ratings is not None: 
-                test_preds = self.predict(test_ratings[:, :2])
-                test_preds_total = ((np.array(test_preds_total) * iteration + np.array(test_preds))/(iteration + 1)).tolist()
-                test_rmse = RMSE(test_preds_total, test_ratings[:, 2])
-                test_rmse_list.append(test_rmse)
-                logger.info("iter: %d, train RMSE: %.6f, test RMSE: %.6f", iteration, train_rmse, test_rmse)
-            else: 
-                logger.info("iter: %d, train RMSE: %.6f", iteration, train_rmse)
+            # in order to make a meaningful MCMC
+            # we need to sample from the correct distribution
+            self._update_average_features(self.iter_)
+            self.iter_ += 1
 
-            # stop when converge
-            if last_rmse and abs(train_rmse - last_rmse) < self.converge:  # if you get convergence -> stop
-                logger.info('converges at iteration %d. stop.', iteration)
-                break
-            else:
-                last_rmse = train_rmse
-        if test_ratings is not None: 
-            return train_rmse_list, test_rmse_list
-        else: 
-            return train_rmse_list
-        
-    def fit_old(self, ratings, test_ratings=None, n_iters=50):
-        """training models; I modified it such that if you also pass test_ratings, it computes the test RMSE at each step. 
-        This is wrong since it does not implemenent correctly the MCMC algorithm; infact, in order to use MCMC correctly, 
-        you need to average the predictions of every step to get a final prediction and estimate the RMSE, while in this function
-        the RMSE was computed only on the prediction given by the current value of the feature matrices. Essentially, the predicted
-        ratings are function on the whole chain of values of U and V. The purpose of MCMC chain is infact to estimate an integral by 
-        sampling from the correct distribution for U, V, and this is done by averaging over subsequently extracted samples. """
-
-        check_ratings(ratings, self.n_user, self.n_item,  # checks if ratings matrix is OK
-                      self.max_rating, self.min_rating)
-
-        self.mean_rating_ = np.mean(ratings[:, 2])
-
-        # only two different ways of building the matrix. 
-        # csr user-item matrix for fast row access (user update)
-        self.ratings_csr_ = build_user_item_matrix(
-            self.n_user, self.n_item, ratings)
-        # keep a csc matrix for fast col access (item update)
-        self.ratings_csc_ = self.ratings_csr_.tocsc() 
-    
-        train_rmse_list = []
-        if test_ratings is not None: 
-            test_rmse_list = []
-        
-        last_rmse = None
-        for iteration in xrange(n_iters):
-            logger.debug("iteration %d...", iteration)
-
-            # THE FOLLOWING ARE THE GIBBS SAMPLING STEP 
-        
-            # update item & user parameter
-            self._update_item_params()
-            self._update_user_params()
-
-            # update item & user features
-            self._udpate_item_features()
-            self._update_user_features()
-            
-            # compute RMSE; NB: at each step, this code just predicts the R matrix using U, V but does not make the average over more 
-            # prediction steps, as it should. This is not how MCMC works!!!
+            # compute RMSE
             train_preds = self.predict(ratings[:, :2])
             train_rmse = RMSE(train_preds, ratings[:, 2])
-            train_rmse_list.append(train_rmse)
-            if test_ratings is not None: 
-                test_preds = self.predict(test_ratings[:, :2])
-                test_rmse = RMSE(test_preds, test_ratings[:, 2])
-                test_rmse_list.append(test_rmse)
-                logger.info("iter: %d, train RMSE: %.6f, test RMSE: %.6f", iteration, train_rmse, test_rmse)
-            else: 
-                logger.info("iter: %d, train RMSE: %.6f", iteration, train_rmse)
-
+            logger.info("iteration: %d, train RMSE: %.6f", self.iter_, train_rmse)
             # stop when converge
-            if last_rmse and abs(train_rmse - last_rmse) < self.converge:  # if you get convergence -> stop
-                logger.info('converges at iteration %d. stop.', iteration)
+            if last_rmse and abs(train_rmse - last_rmse) < self.converge:
+                logger.info('converges at iteration %d. stop.', self.iter_)
                 break
             else:
                 last_rmse = train_rmse
-        if test_ratings is not None: 
-            return train_rmse_list, test_rmse_list
-        else: 
-            return train_rmse_list
-  
-    def predict(self, data):
+        return self
 
+    def predict(self, data):
         if not self.mean_rating_:
             raise NotFittedError()
 
-        u_features = self.user_features_.take(data.take(0, axis=1), axis=0)
-        i_features = self.item_features_.take(data.take(1, axis=1), axis=0)
+        u_features = self.avg_user_features_.take(data.take(0, axis=1), axis=0)
+        i_features = self.avg_item_features_.take(data.take(1, axis=1), axis=0)
         preds = np.sum(u_features * i_features, 1) + self.mean_rating_
 
         if self.max_rating:  # cut the prediction rate. 
@@ -216,7 +139,6 @@ class BPMF(ModelBase):
 
         if self.min_rating:
             preds[preds < self.min_rating] = self.min_rating
-
         return preds
 
     def _update_item_params(self):
@@ -290,7 +212,7 @@ class BPMF(ModelBase):
         for item_id in xrange(self.n_item):
             indices = self.ratings_csc_[:, item_id].indices
             features = self.user_features_[indices, :]
-            rating = self.ratings_csc_[:, item_id].data - self.mean_rating_  # IT SUBTRACTS mean_rating_ AND ADD IT AGAIN LATER.
+            rating = self.ratings_csc_[:, item_id].data - self.mean_rating_
             rating = np.reshape(rating, (rating.shape[0], 1))
 
             covar = inv(self.alpha_item +
