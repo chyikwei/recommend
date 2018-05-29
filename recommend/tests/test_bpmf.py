@@ -60,7 +60,7 @@ class TestBPMF(unittest.TestCase):
                      seed=0,
                      max_rating=self.max_rat,
                      min_rating=self.min_rat,
-                     converge=1e-2)
+                     converge=1e-3)
 
         bpmf1.fit(ratings, n_iters=5)
         rmse_1 = RMSE(bpmf1.predict(ratings[:, :2]), ratings[:, 2])
@@ -69,7 +69,7 @@ class TestBPMF(unittest.TestCase):
                      seed=0,
                      max_rating=self.max_rat,
                      min_rating=self.min_rat,
-                     converge=1e-1)
+                     converge=1e-2)
 
         bpmf2.fit(ratings, n_iters=5)
         rmse_2 = RMSE(bpmf2.predict(ratings[:, :2]), ratings[:, 2])
@@ -119,6 +119,6 @@ class TestBPMFwithMovieLens100K(unittest.TestCase):
                     min_rating=1.,
                     seed=self.seed)
 
-        bpmf.fit(ratings, n_iters=15)
+        bpmf.fit(ratings, n_iters=30)
         rmse = RMSE(bpmf.predict(ratings[:, :2]), ratings[:, 2])
         self.assertTrue(rmse < 0.85)

@@ -48,7 +48,7 @@ class BPMF(ModelBase):
         self.WI_user = np.eye(n_feature, dtype='float64')
         self.beta_user = beta_user
         self.df_user = int(df_user) if df_user is not None else n_feature
-        self.mu0_user = np.repeat(mu0_user, n_feature).reshape(n_feature, 1)
+        self.mu0_user = np.repeat(mu0_user, n_feature).reshape(n_feature, 1)  # a vector
 
         # Inv-Whishart (item features)
         self.WI_item = np.eye(n_feature, dtype='float64')
@@ -63,32 +63,44 @@ class BPMF(ModelBase):
         self.alpha_user = np.eye(n_feature, dtype='float64')
         self.alpha_item = np.eye(n_feature, dtype='float64')
 
+        # initializes the user features randomly.
+        # (There is no special reason to use 0.3)
         self.user_features_ = 0.3 * self.rand_state.rand(n_user, n_feature)
         self.item_features_ = 0.3 * self.rand_state.rand(n_item, n_feature)
 
+        # average user/item features
+        self.avg_user_features_ = np.zeros((n_user, n_feature))
+        self.avg_item_features_ = np.zeros((n_item, n_feature))
+
         # data state
+        self.iter_ = 0
         self.mean_rating_ = None
         self.ratings_csr_ = None
         self.ratings_csc_ = None
 
+    def _update_average_features(self, iteration):
+        self.avg_user_features_ *= (iteration / (iteration + 1.))
+        self.avg_user_features_ += (self.user_features_ / (iteration + 1.))
+        self.avg_item_features_ *= (iteration / (iteration + 1.))
+        self.avg_item_features_ += (self.item_features_ / (iteration + 1.))
+
     def fit(self, ratings, n_iters=50):
-        """training models"""
 
         check_ratings(ratings, self.n_user, self.n_item,
                       self.max_rating, self.min_rating)
 
         self.mean_rating_ = np.mean(ratings[:, 2])
 
+        # only two different ways of building the matrix. 
         # csr user-item matrix for fast row access (user update)
         self.ratings_csr_ = build_user_item_matrix(
             self.n_user, self.n_item, ratings)
         # keep a csc matrix for fast col access (item update)
-        self.ratings_csc_ = self.ratings_csr_.tocsc()
+        self.ratings_csc_ = self.ratings_csr_.tocsc() 
 
         last_rmse = None
         for iteration in xrange(n_iters):
-            logger.debug("iteration %d...", iteration)
-
+            # THE FOLLOWING ARE THE GIBBS SAMPLING STEP 
             # update item & user parameter
             self._update_item_params()
             self._update_user_params()
@@ -97,36 +109,36 @@ class BPMF(ModelBase):
             self._udpate_item_features()
             self._update_user_features()
 
+            # in order to make a meaningful MCMC
+            # we need to sample from the correct distribution
+            self._update_average_features(self.iter_)
+            self.iter_ += 1
+
             # compute RMSE
             train_preds = self.predict(ratings[:, :2])
             train_rmse = RMSE(train_preds, ratings[:, 2])
-            train_preds = self.predict(ratings[:, :2])
-            train_rmse = RMSE(train_preds, ratings[:, 2])
-            logger.info("iter: %d, train RMSE: %.6f", iteration, train_rmse)
-
+            logger.info("iteration: %d, train RMSE: %.6f", self.iter_, train_rmse)
             # stop when converge
             if last_rmse and abs(train_rmse - last_rmse) < self.converge:
-                logger.info('converges at iteration %d. stop.', iteration)
+                logger.info('converges at iteration %d. stop.', self.iter_)
                 break
             else:
                 last_rmse = train_rmse
         return self
 
     def predict(self, data):
-
         if not self.mean_rating_:
             raise NotFittedError()
 
-        u_features = self.user_features_.take(data.take(0, axis=1), axis=0)
-        i_features = self.item_features_.take(data.take(1, axis=1), axis=0)
+        u_features = self.avg_user_features_.take(data.take(0, axis=1), axis=0)
+        i_features = self.avg_item_features_.take(data.take(1, axis=1), axis=0)
         preds = np.sum(u_features * i_features, 1) + self.mean_rating_
 
-        if self.max_rating:
+        if self.max_rating:  # cut the prediction rate. 
             preds[preds > self.max_rating] = self.max_rating
 
         if self.min_rating:
             preds[preds < self.min_rating] = self.min_rating
-
         return preds
 
     def _update_item_params(self):
